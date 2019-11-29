@@ -34,7 +34,7 @@ export function createContext<T>(
     }
   }
 
-  // 这个就是context对象
+  // 这个就是context对象，会被返回出去，Consumer其实也是指向它。
   const context: ReactContext<T> = {
     // 跟react元素的$$typeof不一样
     $$typeof: REACT_CONTEXT_TYPE,

@@ -22,6 +22,7 @@ const RESERVED_PROPS = {
 
 let specialPropKeyWarningShown, specialPropRefWarningShown;
 
+// 验证存不存在ref。
 function hasValidRef(config) {
   if (__DEV__) {
     if (hasOwnProperty.call(config, 'ref')) {
@@ -34,6 +35,7 @@ function hasValidRef(config) {
   return config.ref !== undefined;
 }
 
+// 验证存不存在key。
 function hasValidKey(config) {
   if (__DEV__) {
     if (hasOwnProperty.call(config, 'key')) {
@@ -46,6 +48,7 @@ function hasValidKey(config) {
   return config.key !== undefined;
 }
 
+// 在dev模式下会给key一个警告，这里会调用内部提示用的公共方法。
 function defineKeyPropWarningGetter(props, displayName) {
   const warnAboutAccessingKey = function() {
     if (!specialPropKeyWarningShown) {
@@ -67,6 +70,7 @@ function defineKeyPropWarningGetter(props, displayName) {
   });
 }
 
+// 在dev模式下会给ref一个警告，这里会调用内部提示用的公共方法。
 function defineRefPropWarningGetter(props, displayName) {
   const warnAboutAccessingRef = function() {
     if (!specialPropRefWarningShown) {
@@ -386,7 +390,9 @@ export function cloneElement(element, config, children) {
 
 /**
  * Verifies the object is a ReactElement.
- * See https://reactjs.org/docs/react-api.html#isvalidelement
+ * See https://reactjs.org/docs/react-api.html#isvalidelement、
+ * 翻译：验证对象是否为ReactElement。
+ * 其实就是验证$$typeof是不是REACT_ELEMENT_TYPE。
  * @param {?object} object
  * @return {boolean} True if `object` is a ReactElement.
  * @final
