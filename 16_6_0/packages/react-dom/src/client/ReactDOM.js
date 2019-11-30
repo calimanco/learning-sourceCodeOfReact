@@ -142,6 +142,8 @@ type Batch = FiberRootBatch & {
 
   // The ReactRoot constructor is hoisted but the prototype methods are not. If
   // we move ReactRoot to be above ReactBatch, the inverse error occurs.
+  // 翻译：ReactRoot构造函数被提升，但原型方法却未被提升。
+  //      如果我们将ReactRoot移到ReactBatch之上，则会发生反向错误。
   // $FlowFixMe Hoisting issue.
   _root: Root,
   _hasChildren: boolean,
@@ -291,6 +293,8 @@ type Work = {
   _didCommit: boolean,
 };
 
+// ReactWork对象的构造函数。
+// 就是把then里的回调函数保存到一个数组里，当_onCommit之后一个一个调用。
 function ReactWork() {
   this._callbacks = null;
   this._didCommit = false;
@@ -331,27 +335,38 @@ ReactWork.prototype._onCommit = function(): void {
   }
 };
 
+// ReactRoot对象的构造函数。
+// container：挂载的DOM对象；
+// isConcurrent：是否异步；
+// hydrate：是否调和原有DOM节点。
 function ReactRoot(
   container: Container,
   isConcurrent: boolean,
   hydrate: boolean,
 ) {
+  // 这里就是生成一个FiberRoot对象并挂载到ReactRoot对象的_internalRoot上。
   const root = DOMRenderer.createContainer(container, isConcurrent, hydrate);
   this._internalRoot = root;
 }
+
+// children：React元素列表；
+// callback：回调函数。
 ReactRoot.prototype.render = function(
   children: ReactNodeList,
   callback: ?() => mixed,
 ): Work {
   const root = this._internalRoot;
+  // 新建了一个保存回调函数的队列。
   const work = new ReactWork();
   callback = callback === undefined ? null : callback;
   if (__DEV__) {
     warnOnInvalidCallback(callback, 'render');
   }
   if (callback !== null) {
+    // 就是把回调函数塞进去，这个callback是使用者定义的。
     work.then(callback);
   }
+  // work这里是作为updateContainer的回调函数，如果被调用，那里面的保存的回调函数就会依次调用。
   DOMRenderer.updateContainer(children, root, null, work._onCommit);
   return work;
 };
@@ -444,8 +459,15 @@ function getReactRootElementInContainer(container: any) {
   }
 }
 
+// 当使用hydrate方法渲染的时候，是否真的要调和原有DOM节点还有这层判断。
+// ROOT_ATTRIBUTE_NAME是一个服务端渲染的标记。
+// 总结其结果，只有非null、非document节点、有子节点，并且子节点上有服务端渲染的标记才会返回true。
 function shouldHydrateDueToLegacyHeuristic(container) {
+  // 这个函数，如果不存在container就返回null；container是document节点就返回document节点；
+  // 以上都不符合就返回第一个子节点。
   const rootElement = getReactRootElementInContainer(container);
+  // 其实无论上面的结果是null或document节点都会导致下面的为false，只有返回第一个子节点，
+  // 并且子节点上面有服务端渲染的标记才会为true。
   return !!(
     rootElement &&
     rootElement.nodeType === ELEMENT_NODE &&
@@ -461,13 +483,19 @@ ReactGenericBatching.setBatchingImplementation(
 
 let warnedAboutHydrateAPI = false;
 
+// 生成_reactRootContainer标记的方法。
+// container：要挂载的DOM节点；
+// forceHydrate：是否调和原有的DOM节点。
+// 返回一个ReactRoot对象。
 function legacyCreateRootFromDOMContainer(
   container: DOMContainer,
   forceHydrate: boolean,
 ): Root {
+  // 注意这里是否调和原有DOM节点，还有一层判断。
   const shouldHydrate =
     forceHydrate || shouldHydrateDueToLegacyHeuristic(container);
   // First clear any existing content.
+  // 翻译：首先清除所有现有内容。
   if (!shouldHydrate) {
     let warned = false;
     let rootSibling;
@@ -502,10 +530,16 @@ function legacyCreateRootFromDOMContainer(
     }
   }
   // Legacy roots are not async by default.
+  // 翻译：默认情况下，传统根不异步。
   const isConcurrent = false;
   return new ReactRoot(container, isConcurrent, shouldHydrate);
 }
 
+// parentComponent：父节点，初始化的时候这里是null；
+// children：要插入的react元素；
+// container：要挂载的DOM节点；
+// forceHydrate：是否调和原有的DOM节点；
+// callback：回调函数。
 function legacyRenderSubtreeIntoContainer(
   parentComponent: ?React$Component<any, any>,
   children: ReactNodeList,
@@ -525,13 +559,17 @@ function legacyRenderSubtreeIntoContainer(
 
   // TODO: Without `any` type, Flow says "Property cannot be accessed on any
   // member of intersection type." Whyyyyyy.
+  // 这里是判断是不是react控制的DOM节点，_reactRootContainer是个标记，其实也就是ReactRoot对象。
   let root: Root = (container._reactRootContainer: any);
   if (!root) {
     // Initial mount
+    // 翻译：初始化挂载。
+    // 第一次渲染这个_reactRootContainer都是找不到的，需要生成ReactRoot对象并挂载。
     root = container._reactRootContainer = legacyCreateRootFromDOMContainer(
       container,
       forceHydrate,
     );
+    // 如果有回调函数，就进行一次封装。
     if (typeof callback === 'function') {
       const originalCallback = callback;
       callback = function() {
@@ -540,6 +578,7 @@ function legacyRenderSubtreeIntoContainer(
       };
     }
     // Initial mount should not be batched.
+    // 翻译：初始挂载不应批处理。
     DOMRenderer.unbatchedUpdates(() => {
       if (parentComponent != null) {
         root.legacy_renderSubtreeIntoContainer(
@@ -548,10 +587,12 @@ function legacyRenderSubtreeIntoContainer(
           callback,
         );
       } else {
+        // 这个方法是在ReactRoot对象的原型上。
         root.render(children, callback);
       }
     });
   } else {
+    // 这里是非初次渲染的情况。
     if (typeof callback === 'function') {
       const originalCallback = callback;
       callback = function() {
@@ -586,6 +627,7 @@ function createPortal(
   return ReactPortal.createPortal(children, container, null, key);
 }
 
+// 这个就是暴露出去的对象，在项目入口里经常用render方法。
 const ReactDOM: Object = {
   createPortal,
 
@@ -635,6 +677,7 @@ const ReactDOM: Object = {
     );
   },
 
+  // 比如：ReactDOM.render(<Router><App /></Router>, document.getElementById('root'))
   render(
     element: React$Element<any>,
     container: DOMContainer,
