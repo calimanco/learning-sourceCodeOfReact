@@ -82,18 +82,25 @@ if (__DEV__) {
 
 // A Fiber is work on a Component that needs to be done or was done. There can
 // be more than one per component.
+// 翻译：Fiber对应一个需要被处理或者已经处理了的组件。一个组件可以有一个或者多个Fiber
 export type Fiber = {|
   // These first fields are conceptually members of an Instance. This used to
   // be split into a separate type and intersected with the other Fiber fields,
   // but until Flow fixes its intersection bugs, we've merged them into a
   // single type.
+  // 翻译：从概念上讲，这些首要字段是实例的成员。本来应该将其拆分为单独的类型并与其他Fiber字段合并，
+  //      但是在Flow修复其合并错误之前，我们将它们合并为单个类型。
 
   // An Instance is shared between all versions of a component. We can easily
   // break this out into a separate object to avoid copying so much to the
   // alternate versions of the tree. We put this on a single object for now to
   // minimize the number of objects created during the initial render.
+  // 翻译：实例在组件的所有版本之间共享。我们可以轻松地将其分解为一个单独的对象，
+  //      以避免将太多内容复制到节点树的副本中。现在，我们将其放在单个对象上，
+  //      以最小化在初始渲染期间创建的对象数量。
 
   // Tag identifying the type of fiber.
+  // 翻译：标识Fiber对象类型
   tag: WorkTag,
 
   // Unique identifier of this child.
@@ -107,6 +114,7 @@ export type Fiber = {|
   type: any,
 
   // The local state associated with this fiber.
+  // 翻译：与此Fiber对象关联的本地状态。
   stateNode: any,
 
   // Conceptual aliases
@@ -284,6 +292,12 @@ function FiberNode(
 //    is faster.
 // 5) It should be easy to port this to a C struct and keep a C implementation
 //    compatible.
+// 这个构造函数，而不是一个类，仍然请确保我们执行以下操作：
+// 1) 禁止向此添加任何实例方法。优化实例方法时，很难预测它们，并且在静态编译器中几乎永远不会正确地插入它们。
+// 2) 禁止依靠`instanceof Fiber`进行类型测试。我们应该始终知道它何时是Fiber对象。
+// 3) 我们可能想尝试使用数字类型的key，因为它们在非JIT环境中更容易优化。
+// 4) 为了更便捷，我们可以容易地从构造函数到createFiber函数。
+// 5) 将其移植到C结构并保持C实现兼容应该很容易。
 const createFiber = function(
   tag: WorkTag,
   pendingProps: mixed,
@@ -398,6 +412,11 @@ export function createWorkInProgress(
   return workInProgress;
 }
 
+/**
+ * 为FiberRoot对象的current属性创建Fiber对象
+ * @param isConcurrent 是否异步
+ * @return {Fiber}
+ */
 export function createHostRootFiber(isConcurrent: boolean): Fiber {
   let mode = isConcurrent ? ConcurrentMode | StrictMode : NoContext;
 
@@ -405,6 +424,8 @@ export function createHostRootFiber(isConcurrent: boolean): Fiber {
     // Always collect profile timings when DevTools are present.
     // This enables DevTools to start capturing timing at any point–
     // Without some nodes in the tree having empty base times.
+    // 翻译：存在DevTools时，请始终收集配置的时序。这使DevTools可以在任何时候开始捕获时序，
+    //      除了节点树中的某些没有基准时间的节点。
     mode |= ProfileMode;
   }
 

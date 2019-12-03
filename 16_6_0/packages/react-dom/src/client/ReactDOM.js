@@ -344,7 +344,7 @@ function ReactRoot(
   isConcurrent: boolean,
   hydrate: boolean,
 ) {
-  // 这里就是生成一个FiberRoot对象并挂载到ReactRoot对象的_internalRoot上。
+  // 这里生成一个FiberRoot对象并挂载到ReactRoot对象的_internalRoot上。
   const root = DOMRenderer.createContainer(container, isConcurrent, hydrate);
   this._internalRoot = root;
 }
@@ -483,7 +483,7 @@ ReactGenericBatching.setBatchingImplementation(
 
 let warnedAboutHydrateAPI = false;
 
-// 生成_reactRootContainer标记的方法。
+// 生成_reactRootContainer标记（ReactRoot对象）的方法。
 // container：要挂载的DOM节点；
 // forceHydrate：是否调和原有的DOM节点。
 // 返回一个ReactRoot对象。
@@ -491,7 +491,7 @@ function legacyCreateRootFromDOMContainer(
   container: DOMContainer,
   forceHydrate: boolean,
 ): Root {
-  // 注意这里是否调和原有DOM节点，还有一层判断。
+  // 注意，这里是否调和原有DOM节点，还有一层判断。
   const shouldHydrate =
     forceHydrate || shouldHydrateDueToLegacyHeuristic(container);
   // First clear any existing content.
@@ -499,6 +499,7 @@ function legacyCreateRootFromDOMContainer(
   if (!shouldHydrate) {
     let warned = false;
     let rootSibling;
+    // 清理DOM子节点的技巧方法，速度快且干净。
     while ((rootSibling = container.lastChild)) {
       if (__DEV__) {
         if (
@@ -579,6 +580,7 @@ function legacyRenderSubtreeIntoContainer(
     }
     // Initial mount should not be batched.
     // 翻译：初始挂载不应批处理。
+    // 由于是根节点，当然尽快渲染。
     DOMRenderer.unbatchedUpdates(() => {
       if (parentComponent != null) {
         root.legacy_renderSubtreeIntoContainer(
@@ -593,6 +595,7 @@ function legacyRenderSubtreeIntoContainer(
     });
   } else {
     // 这里是非初次渲染的情况。
+    // 代码上除了ReactRoot创建的过程就跟上面差不多一样。
     if (typeof callback === 'function') {
       const originalCallback = callback;
       callback = function() {
@@ -601,6 +604,8 @@ function legacyRenderSubtreeIntoContainer(
       };
     }
     // Update
+    // 翻译：执行更新。
+    // 注意，这里跟初始化的代码不同，没有使用DOMRenderer.unbatchedUpdates
     if (parentComponent != null) {
       root.legacy_renderSubtreeIntoContainer(
         parentComponent,
@@ -611,6 +616,7 @@ function legacyRenderSubtreeIntoContainer(
       root.render(children, callback);
     }
   }
+  // 无论是不是初始化，都会执行这个方法。
   return DOMRenderer.getPublicRootInstance(root._internalRoot);
 }
 
@@ -677,7 +683,9 @@ const ReactDOM: Object = {
     );
   },
 
-  // 比如：ReactDOM.render(<Router><App /></Router>, document.getElementById('root'))
+  // 比如常用的：ReactDOM.render(<App></App>, document.getElementById('root'))
+  // 这里jsx会被转换为
+  // ReactDOM.render(React.createElement(App, null), document.getElementById('root'));
   render(
     element: React$Element<any>,
     container: DOMContainer,

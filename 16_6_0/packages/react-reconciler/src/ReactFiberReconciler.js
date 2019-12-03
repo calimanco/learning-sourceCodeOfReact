@@ -265,6 +265,9 @@ function findHostInstanceWithWarning(
 }
 
 // 这个就是生成FiberRoot对象
+// containerInfo：挂载的DOM对象；
+// isConcurrent：是否异步；
+// hydrate：是否调和原有DOM节点。
 export function createContainer(
   containerInfo: Container,
   isConcurrent: boolean,
@@ -273,12 +276,18 @@ export function createContainer(
   return createFiberRoot(containerInfo, isConcurrent, hydrate);
 }
 
+// ReactRoot原型上的render方法最后调用这个函数。
+// children：React元素列表；
+// container：FiberRoot对象；
+// parentComponent：父节点；
+// callback：回调函数。
 export function updateContainer(
   element: ReactNodeList,
   container: OpaqueRoot,
   parentComponent: ?React$Component<any, any>,
   callback: ?Function,
 ): ExpirationTime {
+  // current就是一个Fiber对象
   const current = container.current;
   const currentTime = requestCurrentTime();
   const expirationTime = computeExpirationForFiber(currentTime, current);

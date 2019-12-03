@@ -111,6 +111,8 @@ type BaseFiberRootProperties = {|
 // They enable interactions to be associated with their async work,
 // And expose interaction metadata to the React DevTools Profiler plugin.
 // Note that these attributes are only defined when the enableSchedulerTracing flag is enabled.
+// 翻译：以下属性仅由交互跟踪构建使用。它们使交互能够与其异步工作相关联，并将交互元数据公开给React DevTools Profiler插件。
+//      请注意，仅在启用enableSchedulerTracing标志时定义这些属性。
 type ProfilingOnlyFiberRootProperties = {|
   interactionThreadID: number,
   memoizedInteractions: Set<Interaction>,
@@ -122,12 +124,23 @@ type ProfilingOnlyFiberRootProperties = {|
 // Profiling properties are only safe to access in profiling builds (when enableSchedulerTracing is true).
 // The types are defined separately within this file to ensure they stay in sync.
 // (We don't have to use an inline :any cast when enableSchedulerTracing is disabled.)
+// 翻译：导出的FiberRoot类型包括所有属性，为了避免潜在的容易出错的问题：在整个项目中进行任意类型转换。
+//      仅在配置文件构建中可以安全访问配置文件属性（当enableSchedulerTracing为true时）。
+//      这些类型在此文件中单独定义，以确保它们保持同步。
+//      （当禁用enableSchedulerTracing时，我们不必使用任何内联的类型转换。）
+// ps：'any casts'的翻译我拿不准，暂定为'任意类型转换'。
 export type FiberRoot = {
   ...BaseFiberRootProperties,
   ...ProfilingOnlyFiberRootProperties,
 };
 
-// FiberRoot对象构造函数
+/**
+ * FiberRoot对象构造函数
+ * @param containerInfo 挂载的DOM对象
+ * @param isConcurrent 是否异步
+ * @param hydrate 是否调和原有DOM节点
+ * @return {FiberRoot}
+ */
 export function createFiberRoot(
   containerInfo: any,
   isConcurrent: boolean,
@@ -135,11 +148,13 @@ export function createFiberRoot(
 ): FiberRoot {
   // Cyclic construction. This cheats the type system right now because
   // stateNode is any.
-  // 翻译：循环构建。这里现在欺骗了类型系统，因为stateNode是any。
+  // 翻译：循环构建。这里现在欺骗了类型系统，因为stateNode是任意的。
   // 这里是创建了一个Fiber对象。
   const uninitializedFiber = createHostRootFiber(isConcurrent);
 
   let root;
+  // 暂时不知道enableSchedulerTracing是干啥的，为false会使构建出来的FiberRoot少几个属性。
+  // 字面意思：启用调度程序跟踪。
   if (enableSchedulerTracing) {
     root = ({
       current: uninitializedFiber,
@@ -201,6 +216,9 @@ export function createFiberRoot(
   // The reason for the way the Flow types are structured in this file,
   // Is to avoid needing :any casts everywhere interaction tracing fields are used.
   // Unfortunately that requires an :any cast for non-interaction tracing capable builds.
+  // 翻译：在此文件中构造Flow类型的方式的原因是，避免使用交互跟踪字段的任何地方都进行任意类型转换。
+  //      不幸的是，对于不支持交互跟踪的构建，这需要任意类型转换。
   // $FlowFixMe Remove this :any cast and replace it with something better.
+  // 翻译：移除这条：any类型转换并用更好的东西替换它。
   return ((root: any): FiberRoot);
 }
