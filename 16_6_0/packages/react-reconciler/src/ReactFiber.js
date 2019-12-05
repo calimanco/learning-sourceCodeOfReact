@@ -104,13 +104,18 @@ export type Fiber = {|
   tag: WorkTag,
 
   // Unique identifier of this child.
+  // 翻译：此child的唯一标识符。
   key: null | string,
 
   // The value of element.type which is used to preserve the identity during
   // reconciliation of this child.
+  // 翻译：element.type的值，用于在协调此子对象期间所保留的属性。
+  // 也就是我们调用`createElement`的第一个参数。
   elementType: any,
 
   // The resolved function/class/ associated with this fiber.
+  // 翻译：与这个Fiber对象关联的resolved状态的函数或类。
+  // 异步组件resolved之后返回的内容，一般是`function`或者`class`
   type: any,
 
   // The local state associated with this fiber.
@@ -120,35 +125,55 @@ export type Fiber = {|
   // Conceptual aliases
   // parent : Instance -> return The parent happens to be the same as the
   // return fiber since we've merged the fiber and instance.
+  // 翻译：概念别名
+  //      parent：Instance -> return 父级节点恰好与Fiber对象的return属性指向相同，
+  //      因为我们已经合并了Fiber对象和实例。
 
   // Remaining fields belong to Fiber
+  // 翻译：其余字段属于Fiber对象本身。
 
   // The Fiber to return to after finishing processing this one.
   // This is effectively the parent, but there can be multiple parents (two)
   // so this is only the parent of the thing we're currently processing.
   // It is conceptually the same as the return address of a stack frame.
+  // 翻译：Fiber对象在完成这一处理后返回。
+  //      这实际上就是父级节点，但这可以有多个父级节点（两个），所以这只是我们当前正在处理的对象的父级节点。
+  //      从概念上讲，它与堆栈帧的返回地址相同。
   return: Fiber | null,
 
   // Singly Linked List Tree Structure.
+  // 翻译：单链接列表树结构。
   child: Fiber | null,
   sibling: Fiber | null,
   index: number,
 
   // The ref last used to attach this node.
   // I'll avoid adding an owner field for prod and model that as functions.
+  // 翻译：ref属性最后一次用于附加该节点。
+  //      我将避免为生产模式和模型添加函数的所有者字段。
   ref: null | (((handle: mixed) => void) & {_stringRef: ?string}) | RefObject,
 
   // Input is the data coming into process this fiber. Arguments. Props.
+  // 翻译：输入的是正在处理该Fiber对象的数据。
   pendingProps: any, // This type will be more specific once we overload the tag.
+  // 翻译：一旦我们重载了标签，此类型将更加具体。
+  // 新的变动带来的新的props。
   memoizedProps: any, // The props used to create the output.
+  // 翻译：用于创建输出的props。
+  // 上一次渲染完成之后的props。
 
   // A queue of state updates and callbacks.
+  // 翻译：状态更新和回调的队列。
+  // 该Fiber对应的组件产生的Update会存放在这个队列里面。
   updateQueue: UpdateQueue<any> | null,
 
   // The state used to create the output
+  // 翻译：用于创建输出的state。
+  // 上一次渲染的时候的state。
   memoizedState: any,
 
   // A linked-list of contexts that this fiber depends on
+  // 翻译：一个存放这个Fiber对象依赖的context的链接列表。
   firstContextDependency: ContextDependency<mixed> | null,
 
   // Bitfield that describes properties about the fiber and its subtree. E.g.
@@ -157,56 +182,85 @@ export type Fiber = {|
   // parent. Additional flags can be set at creation time, but after that the
   // value should remain unchanged throughout the fiber's lifetime, particularly
   // before its child fibers are created.
+  // 翻译：用来描述当前Fiber对象和他子树的属性的`Bitfield`。
+  //      比如：ConcurrentMode的标志指示子树是否应默认为异步。当Fiber对象被创建时，它继承其父节点的mode字段。
+  //      可以在创建时设置其他标志，但是此后，该值应在Fiber对象的整个生命周期中保持不变，尤其是在创建其子节点之前。
   mode: TypeOfMode,
 
   // Effect
+  // 翻译：副作用。
   effectTag: SideEffectTag,
 
   // Singly linked list fast path to the next fiber with side-effects.
+  // 翻译：单链表用来快速查找下一个side effect
   nextEffect: Fiber | null,
 
   // The first and last fiber with side-effect within this subtree. This allows
   // us to reuse a slice of the linked list when we reuse the work done within
   // this fiber.
+  // 翻译：该子树中具有副作用的第一个和最后一个Fiber对象。当我们在此Fiber对象中完成重用工作时，
+  //      这允许我们可以重用链表的一部分。
   firstEffect: Fiber | null,
   lastEffect: Fiber | null,
 
   // Represents a time in the future by which this work should be completed.
   // Does not include work found in its subtree.
+  // 翻译：表示将来此任务在哪个时间点完成。
+  //      不包括他的子树产生的任务。
   expirationTime: ExpirationTime,
 
   // This is used to quickly determine if a subtree has no pending changes.
+  // 翻译：这用于快速确定子树是否有不在挂起状态的更改。
   childExpirationTime: ExpirationTime,
 
   // This is a pooled version of a Fiber. Every fiber that gets updated will
   // eventually have a pair. There are cases when we can clean up pairs to save
   // memory if we need to.
+  // 翻译：这是Fiber对象的混合版本。每个更新的Fiber对象最终都会有一对。
+  //      在某些情况下，我们可以清理配对以节省内存。
+  // 在Fiber树更新的过程中，每个Fiber都会有一个跟其对应的Fiber。
+  // 我们称他为`current <==> workInProgress`。
+  // 在渲染完成之后他们会交换位置。
   alternate: Fiber | null,
 
   // Time spent rendering this Fiber and its descendants for the current update.
   // This tells us how well the tree makes use of sCU for memoization.
   // It is reset to 0 each time we render and only updated when we don't bailout.
   // This field is only set when the enableProfilerTimer flag is enabled.
+  // 翻译：为当前更新渲染此Fiber对象及其子代所花费的时间。
+  //      这告诉我们树使用sCU进行记忆的程度。
+  //      每次渲染时，它将重置为0，并且仅在不进行'bailout'时更新。
+  //      仅在启用enableProfilerTimer标志时才会设置此字段。
+  // 下面是调试相关的，收集每个Fiber和子树渲染时间的。
   actualDuration?: number,
 
   // If the Fiber is currently active in the "render" phase,
   // This marks the time at which the work began.
   // This field is only set when the enableProfilerTimer flag is enabled.
+  // 翻译：如果Fiber对象当前在“渲染”阶段，这标志着工作开始的时间。
+  //      仅在启用enableProfilerTimer标志时才会设置此字段。
   actualStartTime?: number,
 
   // Duration of the most recent render time for this Fiber.
   // This value is not updated when we bailout for memoization purposes.
   // This field is only set when the enableProfilerTimer flag is enabled.
+  // 翻译：该Fiber对象的最新渲染的持续时间。
+  //      当我们出于记忆目的而进行'bailout'时，此值不会更新。
+  //      仅在启用enableProfilerTimer标志时才会设置此字段。
   selfBaseDuration?: number,
 
   // Sum of base times for all descedents of this Fiber.
   // This value bubbles up during the "complete" phase.
   // This field is only set when the enableProfilerTimer flag is enabled.
+  // 翻译：该Fiber对象所有后代的基准时间总和。该值在“完成”阶段写入。
+  //      仅在启用enableProfilerTimer标志时才会设置此字段。
   treeBaseDuration?: number,
 
   // Conceptual aliases
+  // 翻译：概念别名。
   // workInProgress : Fiber ->  alternate The alternate used for reuse happens
   // to be the same as work in progress.
+  // 翻译：workInProgress : Fiber ->  alternate 用于重用的备用项恰好与进行中的工作相同。
   // __DEV__ only
   _debugID?: number,
   _debugSource?: Source | null,
@@ -220,6 +274,14 @@ if (__DEV__) {
   debugCounter = 1;
 }
 
+/**
+ * Fiber对象的构造函数。
+ * @param tag
+ * @param pendingProps
+ * @param key
+ * @param mode
+ * @constructor
+ */
 function FiberNode(
   tag: WorkTag,
   pendingProps: mixed,
@@ -227,6 +289,7 @@ function FiberNode(
   mode: TypeOfMode,
 ) {
   // Instance
+  // 翻译：实例
   this.tag = tag;
   this.key = key;
   this.elementType = null;
@@ -234,6 +297,8 @@ function FiberNode(
   this.stateNode = null;
 
   // Fiber
+  // 翻译：Fiber实例。
+  // 这些是Fiber树的基础。
   this.return = null;
   this.child = null;
   this.sibling = null;
@@ -250,6 +315,7 @@ function FiberNode(
   this.mode = mode;
 
   // Effects
+  // 翻译：副作用。
   this.effectTag = NoEffect;
   this.nextEffect = null;
 
@@ -297,7 +363,15 @@ function FiberNode(
 // 2) 禁止依靠`instanceof Fiber`进行类型测试。我们应该始终知道它何时是Fiber对象。
 // 3) 我们可能想尝试使用数字类型的key，因为它们在非JIT环境中更容易优化。
 // 4) 为了更便捷，我们可以容易地从构造函数到createFiber函数。
-// 5) 将其移植到C结构并保持C实现兼容应该很容易。
+// 5) 很容易将其移植到C结构并保持C实现兼容。
+/**
+ * 生成Fiber实例的方法。
+ * @param tag
+ * @param pendingProps
+ * @param key
+ * @param mode
+ * @return {FiberNode}
+ */
 const createFiber = function(
   tag: WorkTag,
   pendingProps: mixed,
@@ -305,6 +379,7 @@ const createFiber = function(
   mode: TypeOfMode,
 ): Fiber {
   // $FlowFixMe: the shapes are exact here but Flow doesn't like constructors
+  // 翻译：对象结构在这里是精确的，但是Flow不喜欢构造函数。
   return new FiberNode(tag, pendingProps, key, mode);
 };
 
