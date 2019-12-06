@@ -102,32 +102,52 @@ import invariant from 'shared/invariant';
 import warningWithoutStack from 'shared/warningWithoutStack';
 
 export type Update<State> = {
+  // 更新的过期时间。
   expirationTime: ExpirationTime,
 
+  // UpdateState = 0 更新state;
+  // ReplaceState = 1 替代state;
+  // ForceUpdate = 2 强制更新;
+  // CaptureUpdate = 3 捕获的错误更新;
+  // 指定更新的类型，值为以上几种，根据这个标记执行后续操作。
   tag: 0 | 1 | 2 | 3,
+  // 更新内容，比如`setState`接收的第一个参数。
   payload: any,
+  // 对应的回调，`setState`，`render`都有。
   callback: (() => mixed) | null,
 
+  // 指向下一个更新。
   next: Update<State> | null,
+  // 指向下一个`side effect`副作用。
   nextEffect: Update<State> | null,
 };
 
 export type UpdateQueue<State> = {
+  // 每次操作完更新之后的`state`。
   baseState: State,
 
+  // 记录单向链表的数据结构。
+  // 队列中的第一个Update对象。
   firstUpdate: Update<State> | null,
+  // 队列中的最后一个Update对象。
   lastUpdate: Update<State> | null,
 
+  // 第一个错误捕获时的Update对象。
   firstCapturedUpdate: Update<State> | null,
+  // 最后一个错误捕获时的Update对象。
   lastCapturedUpdate: Update<State> | null,
 
+  // 第一个副作用。
   firstEffect: Update<State> | null,
+  // 最后一个副作用。
   lastEffect: Update<State> | null,
 
+  // 第一个和最后一个错误捕获产生的副作用。
   firstCapturedEffect: Update<State> | null,
   lastCapturedEffect: Update<State> | null,
 };
 
+// 给Update对象的tag属性的枚举。
 export const UpdateState = 0;
 export const ReplaceState = 1;
 export const ForceUpdate = 2;
@@ -149,6 +169,11 @@ if (__DEV__) {
   };
 }
 
+/**
+ * 创建并返回UpdateQueue对象（队列）。（可以当成构造函数）
+ * @param baseState 初始状态
+ * @return {UpdateQueue<State>}
+ */
 export function createUpdateQueue<State>(baseState: State): UpdateQueue<State> {
   const queue: UpdateQueue<State> = {
     baseState,
@@ -164,6 +189,12 @@ export function createUpdateQueue<State>(baseState: State): UpdateQueue<State> {
   return queue;
 }
 
+/**
+ * 复制一个UpdateQueue对象（队列）。
+ * 这里的复制只是复制了baseState，firstUpdate，lastUpdate，其他字段会置空。
+ * @param currentQueue 需要复制的对象
+ * @return {UpdateQueue<State>}
+ */
 function cloneUpdateQueue<State>(
   currentQueue: UpdateQueue<State>,
 ): UpdateQueue<State> {
@@ -186,6 +217,11 @@ function cloneUpdateQueue<State>(
   return queue;
 }
 
+/**
+ * 创建并返回Update对象，可以理解成Update的构造函数。
+ * @param expirationTime 过期时间
+ * @return {{next: null, payload: null, expirationTime: ExpirationTime, callback: null, tag: number, nextEffect: null}}
+ */
 export function createUpdate(expirationTime: ExpirationTime): Update<*> {
   return {
     expirationTime: expirationTime,
@@ -199,72 +235,106 @@ export function createUpdate(expirationTime: ExpirationTime): Update<*> {
   };
 }
 
+/**
+ * 将Update对象加入更新队列。
+ * @param queue UpdateQueue对象
+ * @param update Update对象
+ */
 function appendUpdateToQueue<State>(
   queue: UpdateQueue<State>,
   update: Update<State>,
 ) {
   // Append the update to the end of the list.
+  // 翻译：把Update对象加到队列尾部。
   if (queue.lastUpdate === null) {
     // Queue is empty
+    // 翻译：队列是空的。
+    // 如果队列本来就没有尾部，就证明是第一个对象。
     queue.firstUpdate = queue.lastUpdate = update;
   } else {
+    // 如果不是空队列，就把之前的尾部的next替换成当前的Update对象。
+    // 并把尾部设置成当前的Update对象。
     queue.lastUpdate.next = update;
     queue.lastUpdate = update;
   }
 }
 
+/**
+ * 把Update对象加入队列。
+ * @param fiber Fiber对象
+ * @param update Update对象
+ */
 export function enqueueUpdate<State>(fiber: Fiber, update: Update<State>) {
   // Update queues are created lazily.
+  // 翻译：延迟创建更新队列。
+  // alternate实际上就是workingProgress中的Fiber，为了要保证两个Fiber的更新队列相同，
+  // 这里做了很多判断和处理。
   const alternate = fiber.alternate;
   let queue1;
   let queue2;
   if (alternate === null) {
     // There's only one fiber.
+    // 翻译：这里只有一个Fiber对象。
     queue1 = fiber.updateQueue;
     queue2 = null;
     if (queue1 === null) {
+      // 创建新的UpdateQueue对象。
       queue1 = fiber.updateQueue = createUpdateQueue(fiber.memoizedState);
     }
   } else {
     // There are two owners.
+    // 翻译：这里有两个Fiber对象。
     queue1 = fiber.updateQueue;
     queue2 = alternate.updateQueue;
     if (queue1 === null) {
       if (queue2 === null) {
         // Neither fiber has an update queue. Create new ones.
+        // 翻译：这两个Fiber对象都没有更新队列。 创建新的。
         queue1 = fiber.updateQueue = createUpdateQueue(fiber.memoizedState);
         queue2 = alternate.updateQueue = createUpdateQueue(
           alternate.memoizedState,
         );
       } else {
         // Only one fiber has an update queue. Clone to create a new one.
+        // 翻译：只有一个Fiber对象有更新队列。克隆以创建一个新的。
+        // 把alternate上的更新队列复制到Fiber对象上。
         queue1 = fiber.updateQueue = cloneUpdateQueue(queue2);
       }
     } else {
       if (queue2 === null) {
         // Only one fiber has an update queue. Clone to create a new one.
+        // 翻译：只有一个Fiber对象有更新队列。克隆以创建一个新的。
+        // 把Fiber对象上的更新队列复制到alternate上。
         queue2 = alternate.updateQueue = cloneUpdateQueue(queue1);
       } else {
         // Both owners have an update queue.
+        // 两个都有更新队列。
       }
     }
   }
   if (queue2 === null || queue1 === queue2) {
     // There's only a single queue.
+    // 翻译：这里只有一个Fiber对象。
     appendUpdateToQueue(queue1, update);
   } else {
     // There are two queues. We need to append the update to both queues,
     // while accounting for the persistent structure of the list — we don't
     // want the same update to be added multiple times.
+    // 翻译：有两个队列。我们需要将更新添加到两个队列中，同时考虑列表的持久性结构，
+    //      我们不希望多次添加相同的更新。
     if (queue1.lastUpdate === null || queue2.lastUpdate === null) {
       // One of the queues is not empty. We must add the update to both queues.
+      // 翻译：队列之一不为空。我们必须将更新添加到两个队列中。
       appendUpdateToQueue(queue1, update);
       appendUpdateToQueue(queue2, update);
     } else {
       // Both queues are non-empty. The last update is the same in both lists,
       // because of structural sharing. So, only append to one of the lists.
+      // 翻译：两个队列都是非空。两个列表中的最新更新相同，
+      //      因为结构共享。因此，仅追加到列表之一。
       appendUpdateToQueue(queue1, update);
       // But we still need to update the `lastUpdate` pointer of queue2.
+      // 翻译：但是我们仍然需要更新queue2的lastUpdate属性。
       queue2.lastUpdate = update;
     }
   }

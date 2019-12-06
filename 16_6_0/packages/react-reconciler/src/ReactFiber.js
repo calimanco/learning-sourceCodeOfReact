@@ -260,7 +260,7 @@ export type Fiber = {|
   // 翻译：概念别名。
   // workInProgress : Fiber ->  alternate The alternate used for reuse happens
   // to be the same as work in progress.
-  // 翻译：workInProgress : Fiber ->  alternate 用于重用的备用项恰好与进行中的工作相同。
+  // 翻译：workInProgress : Fiber ->  alternate 用于重用的备用项恰好与进行中的Fiber对象相同。
   // __DEV__ only
   _debugID?: number,
   _debugSource?: Source | null,

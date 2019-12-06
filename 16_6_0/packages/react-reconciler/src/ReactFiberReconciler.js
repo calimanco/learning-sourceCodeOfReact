@@ -106,6 +106,14 @@ function getContextForSubtree(
   return parentContext;
 }
 
+/**
+ * 处理根节点的更新。
+ * @param current Fiber对象
+ * @param element React元素列表
+ * @param expirationTime 过期时间
+ * @param callback 回调函数
+ * @return {ExpirationTime}
+ */
 function scheduleRootUpdate(
   current: Fiber,
   element: ReactNodeList,
@@ -130,9 +138,12 @@ function scheduleRootUpdate(
     }
   }
 
+  // 创建一个update对象
   const update = createUpdate(expirationTime);
   // Caution: React DevTools currently depends on this property
   // being called "element".
+  // 翻译：警告：React DevTools当前依赖于此element属性。
+  // 初次渲染这里就是渲染整个DOM树。
   update.payload = {element};
 
   callback = callback === undefined ? null : callback;
@@ -145,12 +156,23 @@ function scheduleRootUpdate(
     );
     update.callback = callback;
   }
+  // 加入更新队列。
   enqueueUpdate(current, update);
 
   scheduleWork(current, expirationTime);
+  // 这里返回的是传入的过期时间。
   return expirationTime;
 }
 
+/**
+ * 使用expirationTime去发起一次更新。
+ * @param element React元素列表
+ * @param container FiberRoot对象
+ * @param parentComponent 父节点
+ * @param expirationTime 过期时间
+ * @param callback 回调函数
+ * @return {ExpirationTime}
+ */
 export function updateContainerAtExpirationTime(
   element: ReactNodeList,
   container: OpaqueRoot,
@@ -180,6 +202,7 @@ export function updateContainerAtExpirationTime(
     container.pendingContext = context;
   }
 
+  // 这里得到的返回值还是expirationTime。
   return scheduleRootUpdate(current, element, expirationTime, callback);
 }
 
@@ -264,10 +287,13 @@ function findHostInstanceWithWarning(
   return findHostInstance(component);
 }
 
-// 这个就是生成FiberRoot对象
-// containerInfo：挂载的DOM对象；
-// isConcurrent：是否异步；
-// hydrate：是否调和原有DOM节点。
+/**
+ * 这个就是生成FiberRoot对象。
+ * @param containerInfo 挂载的DOM对象
+ * @param isConcurrent 是否异步
+ * @param hydrate 是否调和原有DOM节点
+ * @return {FiberRoot}
+ */
 export function createContainer(
   containerInfo: Container,
   isConcurrent: boolean,
@@ -276,11 +302,14 @@ export function createContainer(
   return createFiberRoot(containerInfo, isConcurrent, hydrate);
 }
 
-// ReactRoot原型上的render方法最后调用这个函数。
-// children：React元素列表；
-// container：FiberRoot对象；
-// parentComponent：父节点；
-// callback：回调函数。
+/**
+ * ReactRoot原型上的render方法最后调用这个函数。
+ * @param element React元素列表
+ * @param container FiberRoot对象
+ * @param parentComponent 父节点
+ * @param callback 回调函数
+ * @return {ExpirationTime}
+ */
 export function updateContainer(
   element: ReactNodeList,
   container: OpaqueRoot,
@@ -291,6 +320,7 @@ export function updateContainer(
   const current = container.current;
   const currentTime = requestCurrentTime();
   const expirationTime = computeExpirationForFiber(currentTime, current);
+  // 这里返回的还是expirationTime
   return updateContainerAtExpirationTime(
     element,
     container,
