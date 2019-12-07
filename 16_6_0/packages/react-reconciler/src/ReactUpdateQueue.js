@@ -260,7 +260,7 @@ function appendUpdateToQueue<State>(
 }
 
 /**
- * 把Update对象加入队列。
+ * 初始化Fiber对象上的更新队列或将Update对象加入队列。
  * @param fiber Fiber对象
  * @param update Update对象
  */

@@ -1919,31 +1919,47 @@ function onCommit(root, expirationTime) {
   root.finishedWork = null;
 }
 
+/**
+ * 获取一个过期时间。
+ * 关键词：currentRendererTime（渲染时间），currentSchedulerTime（调度时间）
+ * @return {ExpirationTime}
+ */
 function requestCurrentTime() {
   // requestCurrentTime is called by the scheduler to compute an expiration
   // time.
+  // 翻译：调度程序调用requestCurrentTime函数以计算到期时间。
   //
   // Expiration times are computed by adding to the current time (the start
   // time). However, if two updates are scheduled within the same event, we
   // should treat their start times as simultaneous, even if the actual clock
   // time has advanced between the first and second call.
+  // 翻译：到期时间是通过在当前时间（开始时间）上做加法计算得出的。
+  //      但是，如果两个Update对象在同一个事件内处理，我们应该将他们的开始时间视为相同，
+  //      即使实际时钟时间在第一次调用和第二次调用之间已经改变（前进）。
 
   // In other words, because expiration times determine how updates are batched,
   // we want all updates of like priority that occur within the same event to
   // receive the same expiration time. Otherwise we get tearing.
+  // 翻译：换句话说，由于到期时间决定了更新的批处理方式，
+  //      我们希望在同一事件中发生的所有优先级相同的更新都具有相同的到期时间。否则我们会失控。
   //
   // We keep track of two separate times: the current "renderer" time and the
   // current "scheduler" time. The renderer time can be updated whenever; it
   // only exists to minimize the calls performance.now.
+  // 翻译：我们跟踪两个不同的时间：当前的“渲染器”时间和当前的“调度器”时间。渲染器时间可以随时更新。
+  //      它只是为了最大程度地降低当前调用的性能损耗。
   //
   // But the scheduler time can only be updated if there's no pending work, or
   // if we know for certain that we're not in the middle of an event.
+  // 翻译：但调度时间只能在没有待处理的工作时才更新，或者如果我们确定当前不在事件过程中。
 
   if (isRendering) {
     // We're already rendering. Return the most recently read time.
+    // 翻译：我们已经在渲染。返回最近读取的时间。
     return currentSchedulerTime;
   }
   // Check if there's pending work.
+  // 翻译：检查是否有待处理的工作。
   findHighestPriorityRoot();
   if (
     nextFlushedExpirationTime === NoWork ||
