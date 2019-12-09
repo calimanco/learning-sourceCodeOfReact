@@ -1493,30 +1493,42 @@ function computeUniqueAsyncExpiration(): ExpirationTime {
   return lastUniqueAsyncExpiration;
 }
 
+/**
+ * 计算Fiber对象的到期时间。
+ * @param currentTime 到期时间（有效时间）
+ * @param fiber Fiber对象
+ * @return {*}
+ */
 function computeExpirationForFiber(currentTime: ExpirationTime, fiber: Fiber) {
   let expirationTime;
   if (expirationContext !== NoWork) {
     // An explicit expiration context was set;
+    // 翻译：设置了一个明确的过期上下文；
     expirationTime = expirationContext;
   } else if (isWorking) {
     if (isCommitting) {
       // Updates that occur during the commit phase should have sync priority
       // by default.
+      // 翻译：在提交阶段发生的更新默认情况下应具有同步优先级。
       expirationTime = Sync;
     } else {
       // Updates during the render phase should expire at the same time as
       // the work that is being rendered.
+      // 翻译：渲染阶段中的更新应与正在渲染的work同时到期。
       expirationTime = nextRenderExpirationTime;
     }
   } else {
     // No explicit expiration context was set, and we're not currently
     // performing work. Calculate a new expiration time.
+    // 翻译：没有设置任何明确的过期上下文，并且我们目前不在执行工作。 计算新的到期时间。
     if (fiber.mode & ConcurrentMode) {
       if (isBatchingInteractiveUpdates) {
         // This is an interactive update
+        // 翻译：这是一个交互式更新。
         expirationTime = computeInteractiveExpiration(currentTime);
       } else {
         // This is an async update
+        // 翻译：这是一个异步更新。
         expirationTime = computeAsyncExpiration(currentTime);
       }
       // If we're in the middle of rendering a tree, do not update at the same
@@ -1526,6 +1538,7 @@ function computeExpirationForFiber(currentTime: ExpirationTime, fiber: Fiber) {
       }
     } else {
       // This is a sync update
+      // 翻译：这是一个异步更新。
       expirationTime = Sync;
     }
   }
@@ -1821,14 +1834,20 @@ let currentRendererTime: ExpirationTime = msToExpirationTime(
 let currentSchedulerTime: ExpirationTime = currentRendererTime;
 
 // Use these to prevent an infinite loop of nested updates
+// 翻译：使用这些来防止嵌套更新的无限循环。
 const NESTED_UPDATE_LIMIT = 50;
 let nestedUpdateCount: number = 0;
 let lastCommittedRootDuringThisBatch: FiberRoot | null = null;
 
 const timeHeuristicForUnitOfWork = 1;
 
+/**
+ * js加载完成到运行的间隔。
+ */
 function recomputeCurrentRendererTime() {
+  // now就是Date.now，originalStartTimeMs就是一开始加载的now，两者相减就是渲染过程的时间。
   const currentTimeMs = now() - originalStartTimeMs;
+  // 转换成有效时间。
   currentRendererTime = msToExpirationTime(currentTimeMs);
 }
 
@@ -1953,6 +1972,7 @@ function requestCurrentTime() {
   // if we know for certain that we're not in the middle of an event.
   // 翻译：但调度时间只能在没有待处理的工作时才更新，或者如果我们确定当前不在事件过程中。
 
+  // 初始化阶段当然还未渲染自然为否。
   if (isRendering) {
     // We're already rendering. Return the most recently read time.
     // 翻译：我们已经在渲染。返回最近读取的时间。
@@ -1960,14 +1980,19 @@ function requestCurrentTime() {
   }
   // Check if there's pending work.
   // 翻译：检查是否有待处理的工作。
+  // 从调度队列中找到权限最高的worker。
   findHighestPriorityRoot();
+  // 初始化阶段这个值还未改变，默认值就是NoWork，所以真。
   if (
     nextFlushedExpirationTime === NoWork ||
     nextFlushedExpirationTime === Never
   ) {
     // If there's no pending work, or if the pending work is offscreen, we can
     // read the current time without risk of tearing.
+    // 翻译：如果没有待处理的工作，或者待处理的工作不在屏幕上，我们可以读取当前时间而不会有不一致的风险。
+    // 重新计算当前渲染时间。
     recomputeCurrentRendererTime();
+    // currentRendererTime是保留在这个文件的局部变量，上面的函数其实已经改变了它。
     currentSchedulerTime = currentRendererTime;
     return currentSchedulerTime;
   }
@@ -1976,6 +2001,9 @@ function requestCurrentTime() {
   // within the same event to receive different expiration times, leading to
   // tearing. Return the last read time. During the next idle callback, the
   // time will be updated.
+  // 翻译：已经有待处理的工作。我们可能正处于浏览器事件中。如果要读取当前时间，
+  //      则可能导致同一事件中的多个更新收到不同的到期时间，从而导致不一致。返回上次读取时间。
+  //      在下一个空闲回调期间，时间将被更新。
   return currentSchedulerTime;
 }
 

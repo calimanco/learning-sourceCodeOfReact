@@ -316,11 +316,13 @@ export function updateContainer(
   parentComponent: ?React$Component<any, any>,
   callback: ?Function,
 ): ExpirationTime {
-  // current就是一个Fiber对象
+  // current就是一个Fiber对象。
   const current = container.current;
+  // 获取一个当前的有效时间。
   const currentTime = requestCurrentTime();
+  // 计算Fiber对象的到期时间。
   const expirationTime = computeExpirationForFiber(currentTime, current);
-  // 这里返回的还是expirationTime
+  // 这里返回的还是expirationTime。
   return updateContainerAtExpirationTime(
     element,
     container,
