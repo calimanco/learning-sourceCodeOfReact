@@ -11,11 +11,14 @@ import MAX_SIGNED_31_BIT_INT from './maxSigned31BitInt';
 
 export type ExpirationTime = number;
 
+// 这三个值在下面代码并没有使用，单纯是暴露出去的常量。
 export const NoWork = 0;
 export const Sync = 1;
 export const Never = MAX_SIGNED_31_BIT_INT;
 
+// "过期时间"与毫秒的转换标准。
 const UNIT_SIZE = 10;
+// 偏移量，用来解决js的"magic number"问题。
 const MAGIC_NUMBER_OFFSET = 2;
 
 // 1 unit of expiration time represents 10ms.
@@ -27,11 +30,16 @@ const MAGIC_NUMBER_OFFSET = 2;
  */
 export function msToExpirationTime(ms: number): ExpirationTime {
   // Always add an offset so that we don't clash with the magic number for NoWork.
-  // 翻译：始终添加偏移量，以免与NoWork的魔幻数字发生冲突。
+  // 翻译：始终添加偏移量，以免与NoWork的"magic number"发生冲突。
   // 求有效时间，取整，加偏移量。
   return ((ms / UNIT_SIZE) | 0) + MAGIC_NUMBER_OFFSET;
 }
 
+/**
+ * "过期时间"换成毫秒。
+ * @param expirationTime "过期时间"
+ * @return {number}
+ */
 export function expirationTimeToMs(expirationTime: ExpirationTime): number {
   return (expirationTime - MAGIC_NUMBER_OFFSET) * UNIT_SIZE;
 }
