@@ -237,6 +237,8 @@ let lastUniqueAsyncExpiration: number = 0;
 // Represents the expiration time that incoming updates should use. (If this
 // is NoWork, use the default strategy: async updates in async mode, sync
 // updates in sync mode.)
+// 翻译：表示传入更新应使用的到期时间。(如果这是NoWork，请使用默认策略：
+//      在异步模式下进行异步更新，在同步模式下进行同步更新。)
 let expirationContext: ExpirationTime = NoWork;
 
 let isWorking: boolean = false;
@@ -1495,17 +1497,21 @@ function computeUniqueAsyncExpiration(): ExpirationTime {
 
 /**
  * 计算Fiber对象的到期时间。
- * @param currentTime 到期时间（有效时间）
+ * @param currentTime "到期时间"
  * @param fiber Fiber对象
  * @return {*}
  */
 function computeExpirationForFiber(currentTime: ExpirationTime, fiber: Fiber) {
   let expirationTime;
+  // expirationContext默认初始是NoWork，即使用默认策略，非NoWork即表明要强制使用某种模式。
+  // 调用deferredUpdates时这个值会变成低优先级的"过期时间"；
+  // 调用syncUpdates时这个值会变成Sync，使用ReactDom暴露的flushSync就是使用了这个函数。
   if (expirationContext !== NoWork) {
     // An explicit expiration context was set;
-    // 翻译：设置了一个明确的过期上下文；
+    // 翻译：设置了一个明确的过期context；
     expirationTime = expirationContext;
   } else if (isWorking) {
+    // 这时有任务正在更新情况。
     if (isCommitting) {
       // Updates that occur during the commit phase should have sync priority
       // by default.
@@ -1518,10 +1524,13 @@ function computeExpirationForFiber(currentTime: ExpirationTime, fiber: Fiber) {
       expirationTime = nextRenderExpirationTime;
     }
   } else {
+    // 这里才是默认策略。
     // No explicit expiration context was set, and we're not currently
     // performing work. Calculate a new expiration time.
-    // 翻译：没有设置任何明确的过期上下文，并且我们目前不在执行工作。 计算新的到期时间。
+    // 翻译：没有设置任何明确的过期上下文，并且我们目前不在执行工作。计算新的到期时间。
+    // 只有在ConcurrentMode组件内部才会是异步更新，否则就是同步的。
     if (fiber.mode & ConcurrentMode) {
+      // 大部分情况这里都是true，比如标签上绑定的回调函数。
       if (isBatchingInteractiveUpdates) {
         // This is an interactive update
         // 翻译：这是一个交互式更新。
@@ -1533,12 +1542,13 @@ function computeExpirationForFiber(currentTime: ExpirationTime, fiber: Fiber) {
       }
       // If we're in the middle of rendering a tree, do not update at the same
       // expiration time that is already rendering.
+      // 翻译：如果我们正在渲染树，请不要在已经渲染的到期时间进行更新。
       if (nextRoot !== null && expirationTime === nextRenderExpirationTime) {
         expirationTime += 1;
       }
     } else {
       // This is a sync update
-      // 翻译：这是一个异步更新。
+      // 翻译：这是一个同步更新。
       expirationTime = Sync;
     }
   }
@@ -1847,7 +1857,7 @@ const timeHeuristicForUnitOfWork = 1;
 function recomputeCurrentRendererTime() {
   // now就是Date.now，originalStartTimeMs就是一开始加载的now，两者相减就是渲染过程的时间。
   const currentTimeMs = now() - originalStartTimeMs;
-  // 转换成有效时间。
+  // 转换成"过期时间"。
   currentRendererTime = msToExpirationTime(currentTimeMs);
 }
 

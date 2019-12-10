@@ -318,9 +318,9 @@ export function updateContainer(
 ): ExpirationTime {
   // current就是一个Fiber对象。
   const current = container.current;
-  // 获取一个当前的有效时间。
+  // 获取一个当前的"过期时间"。
   const currentTime = requestCurrentTime();
-  // 计算Fiber对象的到期时间。
+  // 计算Fiber对象的到期时间，这里不一定会使用上面的。
   const expirationTime = computeExpirationForFiber(currentTime, current);
   // 这里返回的还是expirationTime。
   return updateContainerAtExpirationTime(
