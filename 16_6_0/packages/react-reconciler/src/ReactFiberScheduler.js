@@ -1906,31 +1906,48 @@ function recomputeCurrentRendererTime() {
   currentRendererTime = msToExpirationTime(currentTimeMs);
 }
 
+/**
+ * 异步渲染的调度方法
+ * @param root FiberRoot对象
+ * @param expirationTime "过期时间"
+ */
 function scheduleCallbackWithExpirationTime(
   root: FiberRoot,
   expirationTime: ExpirationTime,
 ) {
+  // callbackExpirationTime这个全局变量，记录上一次调用这个方法的ExpirationTime
   if (callbackExpirationTime !== NoWork) {
+    // 这个分支说明有正在进行的任务。
     // A callback is already scheduled. Check its expiration time (timeout).
+    // 翻译：已经安排了回调。检查其到期时间（超时）。
     if (expirationTime > callbackExpirationTime) {
       // Existing callback has sufficient timeout. Exit.
+      // 翻译：现有的回调任务优先级高。退出。
+      // 当前的优先级比之前的低（过期时间大），当然不会执行。
       return;
     } else {
       if (callbackID !== null) {
         // Existing callback has insufficient timeout. Cancel and schedule a
         // new one.
+        // 翻译：现有的回调任务优先级低。取消并安排一个新的。
         cancelDeferredCallback(callbackID);
       }
     }
     // The request callback timer is already running. Don't start a new one.
+    // 翻译：请求回调计时器已在运行。不要开始新的。
   } else {
+    // 性能相关
     startRequestCallbackTimer();
   }
 
   callbackExpirationTime = expirationTime;
+  // 现在与代码加载时的时间差。
   const currentMs = now() - originalStartTimeMs;
+  // "过期时间"转换成ms。
   const expirationTimeMs = expirationTimeToMs(expirationTime);
+  // 现在运行时间减去回调的过期时间得到时间差。
   const timeout = expirationTimeMs - currentMs;
+  // 生成一个回调id并记录，用来后面取消用。
   callbackID = scheduleDeferredCallback(performAsyncWork, {timeout});
 }
 
@@ -2067,7 +2084,8 @@ function requestCurrentTime() {
 // 翻译：每当根收到更新时，调度程序就会调用requestWork。
 //      将来某个时候由渲染器调用renderRoot。
 /**
- *
+ * 渲染启动，主要是形成schedule链，然后依据isBatchingUpdates判断是不是需要调用渲染，
+ * 如果要渲染还要依据，还要依据expirationTime选择异步渲染还是同步渲染。
  * @param root FiberRoot对象
  * @param expirationTime "过期时间"
  */
@@ -2436,6 +2454,7 @@ function completeRoot(
   expirationTime: ExpirationTime,
 ): void {
   // Check if there's a batch that matches this expiration time.
+  // 翻译：检查是否有与此到期时间匹配的批次。
   const firstBatch = root.firstBatch;
   if (firstBatch !== null && firstBatch._expirationTime <= expirationTime) {
     if (completedBatches === null) {
