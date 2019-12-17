@@ -65,6 +65,7 @@ export type ChildSet = void; // Unused
 export type TimeoutHandle = TimeoutID;
 export type NoTimeout = -1;
 
+// 这里其实来自/packages/scheduler/src/Scheduler.js
 export {
   unstable_now as now,
   unstable_scheduleCallback as scheduleDeferredCallback,

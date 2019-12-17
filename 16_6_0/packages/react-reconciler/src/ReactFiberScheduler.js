@@ -61,6 +61,7 @@ import {
 
 import ReactFiberInstrumentation from './ReactFiberInstrumentation';
 import * as ReactCurrentFiber from './ReactCurrentFiber';
+// 这些导入来自forks/ReactFiberHostConfig.dom.js
 import {
   now,
   scheduleDeferredCallback,
@@ -1948,6 +1949,7 @@ function scheduleCallbackWithExpirationTime(
   // 现在运行时间减去回调的过期时间得到时间差。
   const timeout = expirationTimeMs - currentMs;
   // 生成一个回调id并记录，用来后面取消用。
+  // scheduleDeferredCallback函数的本体在/packages/scheduler/src/Scheduler.js
   callbackID = scheduleDeferredCallback(performAsyncWork, {timeout});
 }
 
@@ -1955,6 +1957,9 @@ function scheduleCallbackWithExpirationTime(
 // onYield is called upon exiting. We use these in lieu of returning a tuple.
 // I've also chosen not to inline them into renderRoot because these will
 // eventually be lifted into the renderer.
+// 翻译：对于每次对renderRoot的调用，退出时都会调用onFatal，onComplete，
+//      onSuspend和onYield中的一种。我们用这些代替返回元组。
+//      我还选择不将它们内联到renderRoot中，因为这些最终将被提升到渲染器中。
 function onFatal(root) {
   root.finishedWork = null;
 }
