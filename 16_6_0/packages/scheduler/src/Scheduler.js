@@ -15,19 +15,24 @@ var NormalPriority = 3;
 var IdlePriority = 4;
 
 // Max 31 bit integer. The max integer size in V8 for 32-bit systems.
+// 翻译：最多31位整数。对于32位系统，V8中的最大整数大小。
 // Math.pow(2, 30) - 1
 // 0b111111111111111111111111111111
 var maxSigned31BitInt = 1073741823;
 
 // Times out immediately
+// 翻译：立即超时。
 var IMMEDIATE_PRIORITY_TIMEOUT = -1;
 // Eventually times out
+// 最终：最终超时。
 var USER_BLOCKING_PRIORITY = 250;
 var NORMAL_PRIORITY_TIMEOUT = 5000;
 // Never times out
+// 翻译：永不超时。
 var IDLE_PRIORITY = maxSigned31BitInt;
 
 // Callbacks are stored as a circular, doubly linked list.
+// 翻译：回调存储为循环的双向链接列表。
 var firstCallbackNode = null;
 
 var currentPriorityLevel = NormalPriority;
@@ -35,6 +40,7 @@ var currentEventStartTime = -1;
 var currentExpirationTime = -1;
 
 // This is set when a callback is being executed, to prevent re-entrancy.
+// 翻译：在执行回调时设置此值，以防止重新进入。
 var isExecutingCallback = false;
 
 var isHostCallbackScheduled = false;
@@ -334,7 +340,7 @@ function unstable_wrapCallback(callback) {
 }
 
 /**
- *
+ * 新建schedule节点插入队列，并返回节点对象。
  * @param callback 在ReactFiberScheduler里传performAsyncWork
  * @param deprecated_options 在ReactFiberScheduler里传过来的是回调过期时间与当前时间的差值
  *        结构为{timeout}（会废弃）
@@ -469,22 +475,32 @@ function unstable_getCurrentPriorityLevel() {
 // rate. By separating the idle call into a separate event tick we ensure that
 // layout, paint and other browser work is counted against the available time.
 // The frame rate is dynamically adjusted.
+// 翻译：其余代码本质上是requestIdleCallback的polyfill。
+//      它的工作方式是安排一个requestAnimationFrame回调，存储帧开始的时间，
+//      然后安排一个postMessage事件处理器，该消息在绘制后运行。
+//      在postMessage处理程序中，直到当前帧结束为止，要尽可能多地工作。
+//      通过将空闲回调函数分为一个单独的事件刻度，我们确保将布局，绘画和其他浏览器工作计入可用时间。
+//      帧速率是动态调整的。
 
 // We capture a local reference to any global, in case it gets polyfilled after
 // this module is initially evaluated. We want to be using a
 // consistent implementation.
+// 翻译：我们会捕获对任何全局变量的本地引用，以防在最初评估此模块后将其填充。我们希望使用一致的实现。
 var localDate = Date;
 
 // This initialization code may run even on server environments if a component
 // just imports ReactDOM (e.g. for findDOMNode). Some environments might not
 // have setTimeout or clearTimeout. However, we always expect them to be defined
 // on the client. https://github.com/facebook/react/pull/13088
+// 翻译：如果组件仅导入ReactDOM（例如，对于findDOMNode），则此初始化代码甚至可以在服务器环境上运行。
+//      某些环境可能没有setTimeout或clearTimeout。但是，我们始终希望在客户端上定义它们。
 var localSetTimeout = typeof setTimeout === 'function' ? setTimeout : undefined;
 var localClearTimeout =
   typeof clearTimeout === 'function' ? clearTimeout : undefined;
 
 // We don't expect either of these to necessarily be defined, but we will error
 // later if they are missing on the client.
+// 翻译：我们不希望必须定义其中的任何一个，但是如果客户端上缺少它们，我们稍后将出错。
 var localRequestAnimationFrame =
   typeof requestAnimationFrame === 'function'
     ? requestAnimationFrame
@@ -498,6 +514,8 @@ var getCurrentTime;
 // we're backgrounded we prefer for that work to happen so that the page
 // continues to load in the background. So we also schedule a 'setTimeout' as
 // a fallback.
+// 翻译：当浏览器tab切换到后台时requestAnimationFrame不会运行。如果我们正在后台，
+//      我们希望这项工作能够进行，以便页面继续在后台加载。因此我们也安排'setTimeout'作为后备方法。
 // TODO: Need a better heuristic for backgrounded work.
 var ANIMATION_FRAME_TIMEOUT = 100;
 var rAFID;
