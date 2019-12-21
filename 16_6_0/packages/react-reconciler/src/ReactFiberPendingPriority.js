@@ -242,6 +242,11 @@ export function findEarliestOutstandingPriorityLevel(
   return earliestExpirationTime;
 }
 
+/**
+ * 如果过期，将FiberRoot对象上的nextExpirationTimeToWorkOn设置为当前时间。
+ * @param root FiberRoot对象
+ * @param currentTime 当前时间
+ */
 export function didExpireAtExpirationTime(
   root: FiberRoot,
   currentTime: ExpirationTime,
@@ -249,6 +254,7 @@ export function didExpireAtExpirationTime(
   const expirationTime = root.expirationTime;
   if (expirationTime !== NoWork && currentTime >= expirationTime) {
     // The root has expired. Flush all work up to the current time.
+    // 这个根节点已经过期。执行所有工作到当前时间。
     root.nextExpirationTimeToWorkOn = currentTime;
   }
 }
