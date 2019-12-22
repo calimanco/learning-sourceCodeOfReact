@@ -886,15 +886,23 @@ function resetChildExpirationTime(
   workInProgress.childExpirationTime = newChildExpirationTime;
 }
 
+/**
+ * 完成单元任务
+ * @param workInProgress Fiber对象
+ * @return {Fiber|null}
+ */
 function completeUnitOfWork(workInProgress: Fiber): Fiber | null {
   // Attempt to complete the current unit of work, then move to the
   // next sibling. If there are no more siblings, return to the
   // parent fiber.
+  // 翻译：尝试完成当前的工作单元，然后移至下一个兄弟节点。如果没有更多的兄弟节点，返回到父级节点。
   while (true) {
     // The current, flushed, state of this fiber is the alternate.
     // Ideally nothing should rely on this, but relying on it here
     // means that we don't need an additional field on the work in
     // progress.
+    // 翻译：该Fiber对象的当前执行状态是备用状态。理想情况下，没有人应该依赖此，
+    //      但是这里依赖它意味着我们不需要在进行中的任务的其他领域。
     const current = workInProgress.alternate;
     if (__DEV__) {
       ReactCurrentFiber.setCurrentFiber(workInProgress);
@@ -905,6 +913,7 @@ function completeUnitOfWork(workInProgress: Fiber): Fiber | null {
 
     if ((workInProgress.effectTag & Incomplete) === NoEffect) {
       // This fiber completed.
+      // 翻译：这个Fiber节点已经完成。
       if (enableProfilerTimer) {
         if (workInProgress.mode & ProfileMode) {
           startProfilerTimer(workInProgress);
@@ -1063,14 +1072,22 @@ function completeUnitOfWork(workInProgress: Fiber): Fiber | null {
   return null;
 }
 
+/**
+ * 执行工作单元
+ * @param workInProgress Fiber对象
+ * @return {*}
+ */
 function performUnitOfWork(workInProgress: Fiber): Fiber | null {
   // The current, flushed, state of this fiber is the alternate.
   // Ideally nothing should rely on this, but relying on it here
   // means that we don't need an additional field on the work in
   // progress.
+  // 翻译：该Fiber对象的当前执行状态是备用状态。理想情况下，没有人应该依赖此，
+  //      但是这里依赖它意味着我们不需要在进行中的任务的其他领域。
   const current = workInProgress.alternate;
 
   // See if beginning this work spawns more work.
+  // 翻译：看看是否开始这项工作会产生更多的工作。
   startWorkTimer(workInProgress);
   if (__DEV__) {
     ReactCurrentFiber.setCurrentFiber(workInProgress);
@@ -1089,14 +1106,17 @@ function performUnitOfWork(workInProgress: Fiber): Fiber | null {
       startProfilerTimer(workInProgress);
     }
 
+    // 开始真正的渲染工作。
     next = beginWork(current, workInProgress, nextRenderExpirationTime);
     workInProgress.memoizedProps = workInProgress.pendingProps;
 
     if (workInProgress.mode & ProfileMode) {
       // Record the render duration assuming we didn't bailout (or error).
+      // 翻译：假设我们没有纾困（或错误），请记录渲染时间。
       stopProfilerTimerIfRunningAndRecordDelta(workInProgress, true);
     }
   } else {
+    // 开始真正的渲染工作。
     next = beginWork(current, workInProgress, nextRenderExpirationTime);
     workInProgress.memoizedProps = workInProgress.pendingProps;
   }
@@ -1117,6 +1137,8 @@ function performUnitOfWork(workInProgress: Fiber): Fiber | null {
 
   if (next === null) {
     // If this doesn't spawn new work, complete the current work.
+    // 翻译：如果这没有产生新的工作，请完成当前工作。
+    // 这里会往上遍历。
     next = completeUnitOfWork(workInProgress);
   }
 
@@ -1125,14 +1147,20 @@ function performUnitOfWork(workInProgress: Fiber): Fiber | null {
   return next;
 }
 
+/**
+ * 循环执行任务
+ * @param isYieldy 是否可以被中断
+ */
 function workLoop(isYieldy) {
   if (!isYieldy) {
     // Flush work without yielding
+    // 翻译：不中断地执行任务。
     while (nextUnitOfWork !== null) {
       nextUnitOfWork = performUnitOfWork(nextUnitOfWork);
     }
   } else {
     // Flush asynchronous work until the deadline runs out of time.
+    // 翻译：执行异步工作，直到截止期限用完为止。。
     while (nextUnitOfWork !== null && !shouldYield()) {
       nextUnitOfWork = performUnitOfWork(nextUnitOfWork);
     }
@@ -1328,6 +1356,7 @@ function renderRoot(
   }
 
   if (nextUnitOfWork !== null) {
+    // 正常走完流程的情况下nextUnitOfWork应该是null，这是被中断的情况。
     // There's still remaining async work in this tree, but we ran out of time
     // in the current frame. Yield back to the renderer. Unless we're
     // interrupted by a higher priority update, we'll continue later from where
@@ -1438,6 +1467,7 @@ function renderRoot(
   }
 
   // Ready to commit.
+  // 翻译：准备提交。
   onComplete(root, rootWorkInProgress, expirationTime);
 }
 
