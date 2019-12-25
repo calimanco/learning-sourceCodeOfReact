@@ -1486,6 +1486,13 @@ function bailoutOnAlreadyFinishedWork(
   }
 }
 
+/**
+ * 开始DOM更新，会在src/ReactFiberScheduler.js的performUnitOfWork调用。
+ * @param current 根的Fiber对象
+ * @param workInProgress 进行中的Fiber对象
+ * @param renderExpirationTime
+ * @return {Fiber|Fiber.child|Fiber|null|*}
+ */
 function beginWork(
   current: Fiber | null,
   workInProgress: Fiber,
@@ -1502,9 +1509,12 @@ function beginWork(
       (updateExpirationTime === NoWork ||
         updateExpirationTime > renderExpirationTime)
     ) {
+      // 条件：props无变化，还没有过期，非context相关。
       // This fiber does not have any pending work. Bailout without entering
       // the begin phase. There's still some bookkeeping we that needs to be done
       // in this optimized path, mostly pushing stuff onto the stack.
+      // 翻译：该Fiber对象没有任何待处理的工作。无需进入开始阶段即可进行输出。在这种优化路径下，
+      //      我们仍然需要做一些记录工作，主要是将内容推入堆栈。
       switch (workInProgress.tag) {
         case HostRoot:
           pushHostRootContext(workInProgress);

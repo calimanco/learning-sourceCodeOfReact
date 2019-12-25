@@ -1697,8 +1697,8 @@ function retrySuspendedRoot(
 
 /**
  * 寻找Fiber节点的RootFiber。
- * @param fiber
- * @param expirationTime
+ * @param fiber 产生更新的Fiber节点
+ * @param expirationTime 创建update时计算的"过期时间"
  * @return {null}
  */
 function scheduleWorkToRoot(fiber: Fiber, expirationTime): FiberRoot | null {
