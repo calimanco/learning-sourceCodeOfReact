@@ -183,14 +183,26 @@ export function applyDerivedStateFromProps(
   }
 }
 
+// 挂载到Fiber对象上的updater。
+// 这里提供了SetState，ReplaceState，ForceUpdate产生Update对象并进入调度的方法。
 const classComponentUpdater = {
   isMounted,
+  /**
+   * setState实际调用非方法。
+   * @param inst
+   * @param payload
+   * @param callback
+   */
   enqueueSetState(inst, payload, callback) {
     const fiber = ReactInstanceMap.get(inst);
+    // 计算一个当前时间。
     const currentTime = requestCurrentTime();
+    // 得到当前Fiber对象的"过期时间"。
     const expirationTime = computeExpirationForFiber(currentTime, fiber);
 
+    // 生成Update对象。
     const update = createUpdate(expirationTime);
+    // setState没有tag有payload。
     update.payload = payload;
     if (callback !== undefined && callback !== null) {
       if (__DEV__) {
@@ -199,7 +211,9 @@ const classComponentUpdater = {
       update.callback = callback;
     }
 
+    // 将Update对象加入队列。
     enqueueUpdate(fiber, update);
+    // 进入调度fiberSchedule调度流程。
     scheduleWork(fiber, expirationTime);
   },
   enqueueReplaceState(inst, payload, callback) {
@@ -208,6 +222,7 @@ const classComponentUpdater = {
     const expirationTime = computeExpirationForFiber(currentTime, fiber);
 
     const update = createUpdate(expirationTime);
+    // replaceState既有tag又有payload。
     update.tag = ReplaceState;
     update.payload = payload;
 
@@ -227,6 +242,7 @@ const classComponentUpdater = {
     const expirationTime = computeExpirationForFiber(currentTime, fiber);
 
     const update = createUpdate(expirationTime);
+    // forceUpdate有tag没有payload。
     update.tag = ForceUpdate;
 
     if (callback !== undefined && callback !== null) {
