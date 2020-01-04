@@ -92,7 +92,7 @@ var deadlineObject = {
 };
 
 /**
- * 每次队列头部改变都会调用，启动主回调的方法。
+ * 启动循环前的预处理。
  */
 function ensureHostCallbackIsScheduled() {
   if (isExecutingCallback) {
@@ -104,26 +104,32 @@ function ensureHostCallbackIsScheduled() {
   // Schedule the host callback using the earliest expiration in the list.
   // 翻译：使用列表中的最早到期时间安排主回调。
   var expirationTime = firstCallbackNode.expirationTime;
-  // 判断有没有正在进行的主回调，如果有就先取消掉。
+  // 判断有没有正在进行的循环，如果有就先取消掉。
   if (!isHostCallbackScheduled) {
     isHostCallbackScheduled = true;
   } else {
     // Cancel the existing host callback.
-    // 翻译：取消现有的主回调。
+    // 翻译：取消现有的循环。
     cancelHostCallback();
   }
-  // 启动主回调。
+  // 启动循环。
   requestHostCallback(flushWork, expirationTime);
 }
 
+/**
+ * 将firstCallbackNode从队列里移除，并执行上面的回调。
+ */
 function flushFirstCallback() {
   var flushedNode = firstCallbackNode;
 
   // Remove the node from the list before calling the callback. That way the
   // list is in a consistent state even if the callback throws.
+  // 翻译：在调用回调之前，从队列中删除该节点。这样使得即使回调函数被再次调用，队列也处于一致状态。
+  // 这里的回调应该指的是循环要处理的hostCallback，也就是flushWork。
   var next = firstCallbackNode.next;
   if (firstCallbackNode === next) {
     // This is the last callback in the list.
+    // 翻译：这是队列里最后一个回调函数。
     firstCallbackNode = null;
     next = null;
   } else {
@@ -132,9 +138,11 @@ function flushFirstCallback() {
     next.previous = lastCallbackNode;
   }
 
+  // 清理之前的引用，避免内存溢出。
   flushedNode.next = flushedNode.previous = null;
 
   // Now it's safe to call the callback.
+  // 翻译：现在可以安全的调用回调函数了。
   var callback = flushedNode.callback;
   var expirationTime = flushedNode.expirationTime;
   var priorityLevel = flushedNode.priorityLevel;
@@ -144,14 +152,18 @@ function flushFirstCallback() {
   currentExpirationTime = expirationTime;
   var continuationCallback;
   try {
+    // 这里的callback就是FiberScheduler那边传过来的回调(performAsyncWork)，
+    // 会接受一个参数包含本次渲染的信息。
     continuationCallback = callback(deadlineObject);
   } finally {
     currentPriorityLevel = previousPriorityLevel;
     currentExpirationTime = previousExpirationTime;
   }
 
+  // 由于performAsyncWork并没有返回指，所以现阶段下面的代码是无效的。
   // A callback may return a continuation. The continuation should be scheduled
   // with the same priority and expiration as the just-finished callback.
+  // 翻译：回调可能会返回后续请求。应当以与刚刚完成的回调相同的优先级和到期时间来安排后续请求。
   if (typeof continuationCallback === 'function') {
     var continuationNode: CallbackNode = {
       callback: continuationCallback,
@@ -233,7 +245,7 @@ function flushImmediateWork() {
 }
 
 /**
- * 直接工作
+ * "刷出"任务,一个按顺序循环取出队列内函数并运行的过程。
  * @param didTimeout 是否已经超时
  */
 function flushWork(didTimeout) {
@@ -243,7 +255,7 @@ function flushWork(didTimeout) {
     if (didTimeout) {
       // 需要强制更新的情况。
       // Flush all the expired callbacks without yielding.
-      // 翻译：执行所有过期的回调而不需要让步。
+      // 翻译：执行所有过期的回调而不需要延迟。
       while (firstCallbackNode !== null) {
         // Read the current time. Flush all the callbacks that expire at or
         // earlier than that time. Then read the current time again and repeat.
@@ -289,6 +301,7 @@ function flushWork(didTimeout) {
     }
     // Before exiting, flush all the immediate work that was scheduled.
     // 翻译：退出之前，执行所有计划的立即工作。
+    // 现阶段下面的函数无效。
     flushImmediateWork();
   }
 }
@@ -340,7 +353,7 @@ function unstable_wrapCallback(callback) {
 }
 
 /**
- * 新建schedule节点插入队列，并返回节点对象。
+ * 新建callbackNode节点插入队列，并返回节点对象。
  * @param callback 在ReactFiberScheduler里传performAsyncWork
  * @param deprecated_options 在ReactFiberScheduler里传过来的是回调过期时间与当前时间的差值
  *        结构为{timeout}（会废弃）
@@ -650,6 +663,10 @@ if (typeof window !== 'undefined' && window._schedMock) {
   var previousFrameTime = 33;
   var activeFrameTime = 33;
 
+  /**
+   * 获取理论帧截至时间。
+   * @return {number}
+   */
   getFrameDeadline = function() {
     return frameDeadline;
   };
@@ -663,7 +680,8 @@ if (typeof window !== 'undefined' && window._schedMock) {
       .toString(36)
       .slice(2);
   /**
-   * 浏览器空闲时执行的函数。
+   * 浏览器渲染完，空闲时执行的函数。
+   * 选择flushWork的工作模式。
    * @param event
    */
   var idleTick = function(event) {
@@ -673,7 +691,7 @@ if (typeof window !== 'undefined' && window._schedMock) {
 
     isMessageEventScheduled = false;
 
-    // 记录并重置这两个公共变量。
+    // 备份并重置这两个公共变量。
     var prevScheduledCallback = scheduledHostCallback;
     var prevTimeoutTime = timeoutTime;
     scheduledHostCallback = null;
@@ -696,6 +714,7 @@ if (typeof window !== 'undefined' && window._schedMock) {
         // No timeout.
         // 翻译：没有超时。
         if (!isAnimationFrameScheduled) {
+          // 不知这个判断有用的场景，设置下一个rAF回调已经在animationTick做过了。
           // Schedule another animation callback so we retry later.
           // 翻译：安排另一个动画回调，以便我们稍后重试。
           isAnimationFrameScheduled = true;
@@ -727,7 +746,10 @@ if (typeof window !== 'undefined' && window._schedMock) {
   window.addEventListener('message', idleTick, false);
 
   /**
-   * 提供给requestAnimationFrame的回调函数，可以理解成帧的事件运行内容。
+   * 提供给rAF的回调函数，运行完浏览器就进入渲染阶段。
+   * 1. 准备下一个rAF（如果需要）;
+   * 2. 启发式修正frameDeadline（理论截至时间）；
+   * 3. 发起事件（window.postMessage），等待浏览器渲染完后空闲状态执行react操作。
    * @param rafTime 时间戳
    */
   var animationTick = function(rafTime) {
@@ -743,7 +765,7 @@ if (typeof window !== 'undefined' && window._schedMock) {
       // after that.
       // 翻译：尽早将下一个动画回调安排在帧的开头。如果调度程序队列在帧末尾不为空，它将继续在该回调内flushing。
       //      如果队列是空的，则它将立即退出。在帧的开头发布回调，以确保在最早的帧内触发该回调。
-      //      如果我们等到帧结束后才发布回调，则冒着浏览器跳过一个帧并且直到之后的那一帧才触发回调的风险。
+      //      如果我们等到帧结束后才安排回调，就会冒着浏览器跳过一个帧并且直到之后的那一帧才触发回调的风险。
       // 在帧开头就把下一帧的回调设置好，这样是才不会跳过时间。
       requestAnimationFrameWithTimeout(animationTick);
     } else {
@@ -797,7 +819,7 @@ if (typeof window !== 'undefined' && window._schedMock) {
   };
 
   /**
-   * 基于浏览器的启动主回调。
+   * 启动循环。（web平台）
    * @param callback 这个就是flushWork
    * @param absoluteTimeout firstCallbackNode的expirationTime
    */
