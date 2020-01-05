@@ -86,7 +86,7 @@ if (hasNativePerformanceNow) {
 }
 
 var deadlineObject = {
-  // 0则过期，大于零就是剩余的毫秒数。
+  // 一个返回当前帧剩余时间的函数，0则过期，大于零就是剩余的毫秒数。
   timeRemaining,
   didTimeout: false,
 };

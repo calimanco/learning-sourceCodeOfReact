@@ -1953,7 +1953,7 @@ let lastCommittedRootDuringThisBatch: FiberRoot | null = null;
 const timeHeuristicForUnitOfWork = 1;
 
 /**
- * js加载完成到运行的间隔。
+ * js加载完成到当前的时间。
  */
 function recomputeCurrentRendererTime() {
   // now就是Date.now，originalStartTimeMs就是一开始加载的now，两者相减就是渲染过程的时间。
@@ -2320,7 +2320,7 @@ function findHighestPriorityRoot() {
 }
 
 /**
- * 异步执行任务。
+ * 异步执行任务的预处理。
  * @param dl 由scheduler传递过来的deadlineObject，结构{timeRemaining, didTimeout}
  */
 function performAsyncWork(dl) {
@@ -2334,7 +2334,7 @@ function performAsyncWork(dl) {
     //      如果它们包含到期的任务，请将下一个渲染到期时间设置为当前时间。
     //      这具有一次执行所有过期任务的效果，而不是一次只执行一个级别的任务。
     if (firstScheduledRoot !== null) {
-      // 性能记录有关。
+      // 重新计算js加载完成到当前的时间。
       recomputeCurrentRendererTime();
       let root: FiberRoot = firstScheduledRoot;
       do {
@@ -2350,7 +2350,7 @@ function performAsyncWork(dl) {
 }
 
 /**
- * 同步执行任务。
+ * 同步执行任务的预处理。
  */
 function performSyncWork() {
   performWork(Sync, null);
@@ -2358,8 +2358,8 @@ function performSyncWork() {
 
 /**
  * 执行工作
- * @param minExpirationTime
- * @param dl
+ * @param minExpirationTime 最小过期时间
+ * @param dl DeferredCallbackScheduler传递过来的deadlineObject
  */
 function performWork(minExpirationTime: ExpirationTime, dl: Deadline | null) {
   deadline = dl;
@@ -2418,13 +2418,17 @@ function performWork(minExpirationTime: ExpirationTime, dl: Deadline | null) {
 
   // We're done flushing work. Either we ran out of time in this callback,
   // or there's no more work left with sufficient priority.
+  // 翻译：我们已经完成"刷出"工作。要么我们在此回调中用完了时间，要么没有足够的优先级剩下更多的工作了。
 
   // If we're inside a callback, set this to false since we just completed it.
+  // 翻译：如果我们在回调内部，则将其设置为false，因为我们刚刚完成了它。
+  // 清理由调用scheduleCallbackWithExpirationTime时改变的两个值。
   if (deadline !== null) {
     callbackExpirationTime = NoWork;
     callbackID = null;
   }
   // If there's work left over, schedule a new callback.
+  // 翻译：如果还有剩下的任务，安排一个新的回调。
   if (nextFlushedExpirationTime !== NoWork) {
     scheduleCallbackWithExpirationTime(
       ((nextFlushedRoot: any): FiberRoot),
@@ -2433,6 +2437,7 @@ function performWork(minExpirationTime: ExpirationTime, dl: Deadline | null) {
   }
 
   // Clean-up.
+  // 翻译：清理。
   deadline = null;
   deadlineDidExpire = false;
 
