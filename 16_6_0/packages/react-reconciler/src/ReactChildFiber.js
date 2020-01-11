@@ -236,6 +236,14 @@ function warnOnFunctionType() {
 // to be able to optimize each path individually by branching early. This needs
 // a compiler or we can do it manually. Helpers that don't need this branching
 // live outside of this function.
+// 翻译：存在该包装函数是因为我希望克隆每个路径中的代码，以便能够通过尽早分支化来分别优化每个路径。
+//      这需要编译器，或者我们可以手动完成。不需要此分支的辅助函数位于此函数之外。
+/**
+ * 子节点调和器的构造函数。
+ * @param shouldTrackSideEffects 是否应该跟踪副作用
+ * @return {reconcileChildFibers}
+ * @constructor
+ */
 function ChildReconciler(shouldTrackSideEffects) {
   function deleteChild(returnFiber: Fiber, childToDelete: Fiber): void {
     if (!shouldTrackSideEffects) {
@@ -1168,6 +1176,14 @@ function ChildReconciler(shouldTrackSideEffects) {
     }
   }
 
+  /**
+   * 调和单一节点
+   * @param returnFiber
+   * @param currentFirstChild
+   * @param portal
+   * @param expirationTime
+   * @return {Fiber}
+   */
   function reconcileSinglePortal(
     returnFiber: Fiber,
     currentFirstChild: Fiber | null,
@@ -1215,6 +1231,7 @@ function ChildReconciler(shouldTrackSideEffects) {
   // This API will tag the children with the side-effect of the reconciliation
   // itself. They will be added to the side-effect list as we pass through the
   // children and the parent.
+  // 翻译：此API将使用调和本身的副作用标记子节点。当我们通过子节点和父节点时，它们将被添加到副作用列表中。
   function reconcileChildFibers(
     returnFiber: Fiber,
     currentFirstChild: Fiber | null,
@@ -1225,25 +1242,34 @@ function ChildReconciler(shouldTrackSideEffects) {
     // If the top level item is an array, we treat it as a set of children,
     // not as a fragment. Nested arrays on the other hand will be treated as
     // fragment nodes. Recursion happens at the normal flow.
+    // 翻译：此函数不是递归的。
+    //      如果顶层项目是数组，则将其视为一组子项，而不是片段。另一方面，嵌套数组将被视为片段节点。
+    //      递归以正常流发生。
 
     // Handle top level unkeyed fragments as if they were arrays.
     // This leads to an ambiguity between <>{[...]}</> and <>...</>.
     // We treat the ambiguous cases above the same.
+    // 翻译：像对待数组一样处理顶级无key片段。
+    //      这导致<> {[...]} </>和<> ... </>之间的歧义。
+    //      我们处理歧义情况方式跟上面一样。
     const isUnkeyedTopLevelFragment =
       typeof newChild === 'object' &&
       newChild !== null &&
       newChild.type === REACT_FRAGMENT_TYPE &&
       newChild.key === null;
     if (isUnkeyedTopLevelFragment) {
+      // 这里处理FRAGMENT节点，这种节点没有实际作用，只是包裹。
       newChild = newChild.props.children;
     }
 
     // Handle object types
+    // 翻译：处理对象类型。
     const isObject = typeof newChild === 'object' && newChild !== null;
 
     if (isObject) {
       switch (newChild.$$typeof) {
         case REACT_ELEMENT_TYPE:
+          // 通过createElement产生的节点。
           return placeSingleChild(
             reconcileSingleElement(
               returnFiber,
@@ -1253,6 +1279,7 @@ function ChildReconciler(shouldTrackSideEffects) {
             ),
           );
         case REACT_PORTAL_TYPE:
+          // 通过ReactDOM.Portal产生的节点。
           return placeSingleChild(
             reconcileSinglePortal(
               returnFiber,
@@ -1265,6 +1292,7 @@ function ChildReconciler(shouldTrackSideEffects) {
     }
 
     if (typeof newChild === 'string' || typeof newChild === 'number') {
+      // 文本节点。
       return placeSingleChild(
         reconcileSingleTextNode(
           returnFiber,
@@ -1276,6 +1304,7 @@ function ChildReconciler(shouldTrackSideEffects) {
     }
 
     if (isArray(newChild)) {
+      // 子节点是数组。
       return reconcileChildrenArray(
         returnFiber,
         currentFirstChild,
@@ -1285,6 +1314,7 @@ function ChildReconciler(shouldTrackSideEffects) {
     }
 
     if (getIteratorFn(newChild)) {
+      // 子节点是Iterator对象。
       return reconcileChildrenIterator(
         returnFiber,
         currentFirstChild,
@@ -1294,6 +1324,7 @@ function ChildReconciler(shouldTrackSideEffects) {
     }
 
     if (isObject) {
+      // 不符合上面的情况，就是异常情况。
       throwOnInvalidObjectType(returnFiber, newChild);
     }
 

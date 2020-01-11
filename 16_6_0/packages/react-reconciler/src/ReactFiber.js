@@ -412,6 +412,14 @@ export function resolveLazyComponentTag(Component: Function): WorkTag {
 }
 
 // This is used to create an alternate fiber to do work on.
+// 翻译：这用于创建任务执行过程中的Fiber对象副本。
+/**
+ * 创建一个Fiber对象副本并返回，用于更新任务（也可以叫WorkInProgress）。
+ * @param current Fiber对象
+ * @param pendingProps 待处理的props
+ * @param expirationTime 过期时间（无效参数）
+ * @return {Fiber}
+ */
 export function createWorkInProgress(
   current: Fiber,
   pendingProps: any,
@@ -419,11 +427,16 @@ export function createWorkInProgress(
 ): Fiber {
   let workInProgress = current.alternate;
   if (workInProgress === null) {
+    // 如果当前Fiber对象上的workInProgress不存在。
     // We use a double buffering pooling technique because we know that we'll
     // only ever need at most two versions of a tree. We pool the "other" unused
     // node that we're free to reuse. This is lazily created to avoid allocating
     // extra objects for things that are never updated. It also allow us to
     // reclaim the extra memory if needed.
+    // 翻译：我们使用双重缓冲池技术，因为我们知道我们最多只需要一棵树的两个版本。
+    //      我们汇集了可以自由重用的“其他”未使用节点。惰性地创建它是为了避免为永不更新的节点分配额外的对象。
+    //      如果需要，它还允许我们回收额外的内存。
+    // 使用与当前Fiber对象一样的参数创建一个新的workInProgress（也就是Fiber对象）。
     workInProgress = createFiber(
       current.tag,
       pendingProps,
@@ -441,16 +454,21 @@ export function createWorkInProgress(
       workInProgress._debugOwner = current._debugOwner;
     }
 
+    // 这里可以看出workInProgress的alternate和current的alternate是循环引用的关系
     workInProgress.alternate = current;
     current.alternate = workInProgress;
   } else {
+    // 如果当前Fiber对象上的workInProgress存在。
+    // 更新pendingProps。
     workInProgress.pendingProps = pendingProps;
 
     // We already have an alternate.
     // Reset the effect tag.
+    // 翻译：我们已经有一个副本。重置effectTag。
     workInProgress.effectTag = NoEffect;
 
     // The effect list is no longer valid.
+    // 翻译：effectList不再有效。
     workInProgress.nextEffect = null;
     workInProgress.firstEffect = null;
     workInProgress.lastEffect = null;
@@ -460,6 +478,9 @@ export function createWorkInProgress(
       // This prevents time from endlessly accumulating in new commits.
       // This has the downside of resetting values for different priority renders,
       // But works for yielding (the common case) and should support resuming.
+      // 翻译：我们故意重置而不是复制actualDuration和actualStartTime。
+      //      这样可以防止时间无休止地累积在新提交中。
+      //      这具有为不同的优先级渲染重置值的缺点，但可用于中断（常见情况）并且应支持恢复。
       workInProgress.actualDuration = 0;
       workInProgress.actualStartTime = -1;
     }
@@ -475,6 +496,7 @@ export function createWorkInProgress(
   workInProgress.firstContextDependency = current.firstContextDependency;
 
   // These will be overridden during the parent's reconciliation
+  // 翻译：在父节点调和期间，这些将被覆盖。
   workInProgress.sibling = current.sibling;
   workInProgress.index = current.index;
   workInProgress.ref = current.ref;
@@ -484,6 +506,7 @@ export function createWorkInProgress(
     workInProgress.treeBaseDuration = current.treeBaseDuration;
   }
 
+  // 返回生成的workInProgress。
   return workInProgress;
 }
 

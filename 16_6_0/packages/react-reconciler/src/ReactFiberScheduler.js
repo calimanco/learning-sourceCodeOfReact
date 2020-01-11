@@ -1074,7 +1074,7 @@ function completeUnitOfWork(workInProgress: Fiber): Fiber | null {
 }
 
 /**
- * 执行工作单元
+ * 执行Fiber单元工作
  * @param workInProgress Fiber对象
  * @return {*}
  */
@@ -1085,6 +1085,7 @@ function performUnitOfWork(workInProgress: Fiber): Fiber | null {
   // progress.
   // 翻译：该Fiber对象的当前执行状态是备用状态。理想情况下，没有人应该依赖此，
   //      但是这里依赖它意味着我们不需要在进行中的任务的其他领域。
+  // workInProgress的alternate指向的是当前的本体Fiber对象。
   const current = workInProgress.alternate;
 
   // See if beginning this work spawns more work.
@@ -1117,7 +1118,7 @@ function performUnitOfWork(workInProgress: Fiber): Fiber | null {
       stopProfilerTimerIfRunningAndRecordDelta(workInProgress, true);
     }
   } else {
-    // 开始真正的渲染工作。
+    // 开始真正的渲染工作，这里的current可能为空。
     next = beginWork(current, workInProgress, nextRenderExpirationTime);
     workInProgress.memoizedProps = workInProgress.pendingProps;
   }
@@ -1149,7 +1150,7 @@ function performUnitOfWork(workInProgress: Fiber): Fiber | null {
 }
 
 /**
- * 循环执行任务
+ * 循环遍历Fiber树进行更新
  * @param isYieldy 是否可以被中断
  */
 function workLoop(isYieldy) {
@@ -1172,7 +1173,7 @@ function workLoop(isYieldy) {
  * 渲染函数。
  * @param root root节点
  * @param isYieldy 是否可中断
- * @param isExpired 是否过期
+ * @param isExpired 是否过期（是否强制输出）
  */
 function renderRoot(
   root: FiberRoot,
@@ -1187,11 +1188,13 @@ function renderRoot(
   isWorking = true;
   ReactCurrentOwner.currentDispatcher = Dispatcher;
 
+  // 这个值来自performAsyncWork调用didExpireAtExpirationTime设置的，
+  // 设置条件就是已经帧过期并且任务也过期，设置的是performAsyncWork调用时的时间。
   const expirationTime = root.nextExpirationTimeToWorkOn;
 
   // Check if we're starting from a fresh stack, or if we're resuming from
   // previously yielded work.
-  // 翻译：检查我们是从新堆栈开始，还是从先前产生的工作中恢复。
+  // 翻译：检查我们是从新栈开始，还是从先前产生的工作中恢复。
   if (
     expirationTime !== nextRenderExpirationTime ||
     root !== nextRoot ||
@@ -1201,9 +1204,11 @@ function renderRoot(
     // 翻译：重置堆栈并从root节点开始任务。
     resetStack();
     nextRoot = root;
+    // 赋值的是FiberRoot的nextExpirationTimeToWorkOn。
     nextRenderExpirationTime = expirationTime;
-    // 复制出一份渲染中的节点副本，后续都是在workingProgress上操作。
+    // 复制出一份渲染中的Fiber节点副本，后续都是在workingProgress上操作。
     nextUnitOfWork = createWorkInProgress(
+      // 传递的是FiberRoot的current指向的Fiber节点。
       nextRoot.current,
       null,
       nextRenderExpirationTime,
@@ -1256,6 +1261,7 @@ function renderRoot(
   }
 
   let prevInteractions: Set<Interaction> = (null: any);
+  // 跟踪调试代码。
   if (enableSchedulerTracing) {
     // We're about to start new traced work.
     // Restore pending interactions so cascading work triggered during the render phase will be accounted for.
@@ -1263,8 +1269,9 @@ function renderRoot(
     __interactionsRef.current = root.memoizedInteractions;
   }
 
+  // 致命错误标记。
   let didFatal = false;
-
+  // 跟踪调试代码。
   startWorkLoopTimer(nextUnitOfWork);
 
   do {
@@ -1274,6 +1281,7 @@ function renderRoot(
     } catch (thrownValue) {
       if (nextUnitOfWork === null) {
         // This is a fatal error.
+        // 翻译：这是一个致命错误。
         didFatal = true;
         onUncaughtError(thrownValue);
       } else {
@@ -1307,6 +1315,9 @@ function renderRoot(
           // Because we're not sure, treat this as a fatal error. We could track
           // which phase it fails in, but doesn't seem worth it. At least
           // for now.
+          // 翻译：这是一个根节点。根可以捕获自己的错误。但是，我们不知道在推送主上下文前后它是否出错。
+          //      需要此信息以避免堆栈不匹配。因为我们不确定，所以将此视为致命错误。
+          //      我们可以跟踪失败的阶段，但似乎不值得。至少目前是这样。
           didFatal = true;
           onUncaughtError(thrownValue);
         } else {
@@ -1331,6 +1342,7 @@ function renderRoot(
   }
 
   // We're done performing work. Time to clean up.
+  // 翻译：我们完成了工作。是时候清理了。
   isWorking = false;
   ReactCurrentOwner.currentDispatcher = null;
   resetContextDependences();
@@ -1385,6 +1397,8 @@ function renderRoot(
   // `nextRoot` points to the in-progress root. A non-null value indicates
   // that we're in the middle of an async render. Set it to null to indicate
   // there's no more work to be done in the current batch.
+  // 翻译：`nextRoot`指向进行中的根。非null值表示我们处于异步渲染的过程中。
+  //      将其设置为null表示当前批处理中没有更多的工作要做。
   nextRoot = null;
   interruptedBy = null;
 
@@ -1431,6 +1445,7 @@ function renderRoot(
 
   if (!isExpired && nextLatestAbsoluteTimeoutMs !== -1) {
     // The tree was suspended.
+    // 翻译：这个Fiber树被悬挂了。
     const suspendedExpirationTime = expirationTime;
     markSuspendedPriorityLevel(root, suspendedExpirationTime);
 
@@ -2511,7 +2526,7 @@ function performWorkOnRoot(
   // Check if this is async work or sync/expired work.
   // 翻译：检查这是异步工作还是同步/过期工作。
   if (deadline === null || isExpired) {
-    // 同步任务、过期任务的处理。
+    // 强制流程。
     // Flush work without yielding.
     // 翻译：无中断执行任务。
     // TODO: Non-yieldy work does not necessarily imply expired work. A renderer
@@ -2547,6 +2562,7 @@ function performWorkOnRoot(
       }
     }
   } else {
+    // 非强制流程。
     // Flush async work.
     // 翻译：执行异步任务。
     let finishedWork = root.finishedWork;
@@ -2593,6 +2609,12 @@ function performWorkOnRoot(
   isRendering = false;
 }
 
+/**
+ * 完成FiberRoot
+ * @param root
+ * @param finishedWork
+ * @param expirationTime
+ */
 function completeRoot(
   root: FiberRoot,
   finishedWork: Fiber,

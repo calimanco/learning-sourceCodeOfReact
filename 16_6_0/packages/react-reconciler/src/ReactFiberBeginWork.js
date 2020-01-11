@@ -125,6 +125,13 @@ if (__DEV__) {
   didWarnAboutFunctionRefs = {};
 }
 
+/**
+ * 处理子节点。
+ * @param current
+ * @param workInProgress
+ * @param nextChildren
+ * @param renderExpirationTime
+ */
 export function reconcileChildren(
   current: Fiber | null,
   workInProgress: Fiber,
@@ -132,10 +139,14 @@ export function reconcileChildren(
   renderExpirationTime: ExpirationTime,
 ) {
   if (current === null) {
+    // 第一次渲染。这时候当然子节点都是没有的。
     // If this is a fresh new component that hasn't been rendered yet, we
     // won't update its child set by applying minimal side-effects. Instead,
     // we will add them all to the child before it gets rendered. That means
     // we can optimize this reconciliation pass by not tracking side-effects.
+    // 翻译：如果这是一个尚未渲染的全新组件，那么我们不会通过应用最小的副作用来更新其子集。
+    //      相反，我们会在渲染当前节点之前将它们全部添加到子对象中。
+    //      这意味着我们可以通过不跟踪副作用来优化此调和流程。
     workInProgress.child = mountChildFibers(
       workInProgress,
       null,
@@ -143,12 +154,16 @@ export function reconcileChildren(
       renderExpirationTime,
     );
   } else {
+    // 非第一次渲染。
     // If the current child is the same as the work in progress, it means that
     // we haven't yet started any work on these children. Therefore, we use
     // the clone algorithm to create a copy of all the current children.
+    // 翻译：如果当前子节点与正在进行的工作相同，则意味着我们尚未对这些子节点进行任何工作。
+    //      因此，我们使用克隆算法来创建所有当前子代的副本。
 
     // If we had any progressed work already, that is invalid at this point so
     // let's throw it out.
+    // 翻译：如果我们已经有任何进行中的工作，那么在这一点上这是无效的，因此我们将其丢弃。
     workInProgress.child = reconcileChildFibers(
       workInProgress,
       current.child,
@@ -394,6 +409,15 @@ function markRef(current: Fiber | null, workInProgress: Fiber) {
   }
 }
 
+/**
+ * 更新函数组件。
+ * @param current
+ * @param workInProgress
+ * @param Component
+ * @param nextProps
+ * @param renderExpirationTime
+ * @return {*}
+ */
 function updateFunctionComponent(
   current,
   workInProgress,
@@ -401,6 +425,7 @@ function updateFunctionComponent(
   nextProps: any,
   renderExpirationTime,
 ) {
+  // context相关。
   const unmaskedContext = getUnmaskedContext(workInProgress, Component, true);
   const context = getMaskedContext(workInProgress, unmaskedContext);
 
@@ -412,17 +437,23 @@ function updateFunctionComponent(
     nextChildren = Component(nextProps, context);
     ReactCurrentFiber.setCurrentPhase(null);
   } else {
+    // Component其实就是用户写的函数组件。props就是我们在函数里接收到的第一个参数。
+    // 这里有一个文档里没有提及的点，函数第二个参数是context。
     nextChildren = Component(nextProps, context);
   }
 
   // React DevTools reads this flag.
+  // 翻译：React DevTools读取此标志。
+  // effectTag使用的是二进制定义的状态标记，或就是添加状态。
   workInProgress.effectTag |= PerformedWork;
+  // 为React元素生成对应的Fiber对象。
   reconcileChildren(
     current,
     workInProgress,
     nextChildren,
     renderExpirationTime,
   );
+  // 返回当前处理的Fiber对象的子节点。
   return workInProgress.child;
 }
 
@@ -1451,6 +1482,13 @@ function updateContextConsumer(
   }
   */
 
+/**
+ * 已经完成工作的阶段进行退出操作。
+ * @param current
+ * @param workInProgress
+ * @param renderExpirationTime
+ * @return {Fiber|null}
+ */
 function bailoutOnAlreadyFinishedWork(
   current: Fiber | null,
   workInProgress: Fiber,
@@ -1469,28 +1507,31 @@ function bailoutOnAlreadyFinishedWork(
   }
 
   // Check if the children have any pending work.
+  // 翻译：检查子节点是否有未完成的工作。
   const childExpirationTime = workInProgress.childExpirationTime;
   if (
     childExpirationTime === NoWork ||
     childExpirationTime > renderExpirationTime
   ) {
     // The children don't have any work either. We can skip them.
+    // 翻译：子节点也没有任何工作。我们可以跳过它们。
     // TODO: Once we add back resuming, we should check if the children are
     // a work-in-progress set. If so, we need to transfer their effects.
     return null;
   } else {
     // This fiber doesn't have work, but its subtree does. Clone the child
     // fibers and continue.
+    // 翻译：当前Fiber对象没有工作，但是它的子级有工作。克隆子级Fiber对象并继续。
     cloneChildFibers(current, workInProgress);
     return workInProgress.child;
   }
 }
 
 /**
- * 开始DOM更新，会在src/ReactFiberScheduler.js的performUnitOfWork调用。
- * @param current 根的Fiber对象
- * @param workInProgress 进行中的Fiber对象
- * @param renderExpirationTime
+ * 渲染入口方法，会在src/ReactFiberScheduler.js的performUnitOfWork调用。
+ * @param current 当前处理的Fiber对象
+ * @param workInProgress 当前处理的Fiber对象的进行中副本
+ * @param renderExpirationTime 当前处理的Fiber所在的FiberRoot的nextExpirationTimeToWorkOn
  * @return {Fiber|Fiber.child|Fiber|null|*}
  */
 function beginWork(
@@ -1498,23 +1539,30 @@ function beginWork(
   workInProgress: Fiber,
   renderExpirationTime: ExpirationTime,
 ): Fiber | null {
+  // 这个是Fiber上的expirationTime，FiberRoot上的Fiber对象只有第一次渲染才有值。
+  // 而renderExpirationTime是FiberRoot上的nextExpirationTimeToWorkOn。
   const updateExpirationTime = workInProgress.expirationTime;
 
+  // 判断节点是不是第一次渲染，第一次渲染的时候有workInProgress，没有current。
   if (current !== null) {
     const oldProps = current.memoizedProps;
     const newProps = workInProgress.pendingProps;
     if (
+      // props没有变化。
       oldProps === newProps &&
+      // context没有变化
       !hasLegacyContextChanged() &&
+      // 没有更新
       (updateExpirationTime === NoWork ||
+        // 优先级不高
         updateExpirationTime > renderExpirationTime)
     ) {
-      // 条件：props无变化，还没有过期，非context相关。
       // This fiber does not have any pending work. Bailout without entering
       // the begin phase. There's still some bookkeeping we that needs to be done
       // in this optimized path, mostly pushing stuff onto the stack.
       // 翻译：该Fiber对象没有任何待处理的工作。无需进入开始阶段即可进行输出。在这种优化路径下，
       //      我们仍然需要做一些记录工作，主要是将内容推入堆栈。
+      // 下面会会根据组件的类型执行不同操作。
       switch (workInProgress.tag) {
         case HostRoot:
           pushHostRootContext(workInProgress);
@@ -1588,6 +1636,7 @@ function beginWork(
           break;
         }
       }
+      // 跳出
       return bailoutOnAlreadyFinishedWork(
         current,
         workInProgress,
@@ -1597,8 +1646,10 @@ function beginWork(
   }
 
   // Before entering the begin phase, clear the expiration time.
+  // 翻译：在进入开始阶段之前，清除到期时间。
   workInProgress.expirationTime = NoWork;
 
+  // 下面会会根据组件的类型执行不同操作。
   switch (workInProgress.tag) {
     case IndeterminateComponent: {
       const elementType = workInProgress.elementType;
@@ -1620,12 +1671,16 @@ function beginWork(
       );
     }
     case FunctionComponent: {
+      // type对于原生DOM节点就是字符串；组件就是类或者函数。
       const Component = workInProgress.type;
+      // 新一次渲染产生的props。
       const unresolvedProps = workInProgress.pendingProps;
+      // 异步组件相关。
       const resolvedProps =
         workInProgress.elementType === Component
           ? unresolvedProps
           : resolveDefaultProps(Component, unresolvedProps);
+      // 执行函数组件更新。
       return updateFunctionComponent(
         current,
         workInProgress,
