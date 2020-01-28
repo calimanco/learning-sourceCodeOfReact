@@ -1373,6 +1373,11 @@ function ChildReconciler(shouldTrackSideEffects) {
 export const reconcileChildFibers = ChildReconciler(true);
 export const mountChildFibers = ChildReconciler(false);
 
+/**
+ * 将current的子节点复制到其workInProgress。
+ * @param current 当前处理的Fiber对象
+ * @param workInProgress 当前处理的Fiber对象的进行中副本
+ */
 export function cloneChildFibers(
   current: Fiber | null,
   workInProgress: Fiber,
@@ -1382,19 +1387,23 @@ export function cloneChildFibers(
     'Resuming work not yet implemented.',
   );
 
+  // 这里的workInProgress.child还是指向current的child，如果为null就是没有子节点。
   if (workInProgress.child === null) {
     return;
   }
 
   let currentChild = workInProgress.child;
+  // 生成新的子节点。
   let newChild = createWorkInProgress(
     currentChild,
     currentChild.pendingProps,
     currentChild.expirationTime,
   );
+  // 挂载新生成的节点副本。
   workInProgress.child = newChild;
 
   newChild.return = workInProgress;
+  // 循环处理兄弟节点。
   while (currentChild.sibling !== null) {
     currentChild = currentChild.sibling;
     newChild = newChild.sibling = createWorkInProgress(

@@ -411,12 +411,12 @@ function markRef(current: Fiber | null, workInProgress: Fiber) {
 
 /**
  * 更新函数组件。
- * @param current
- * @param workInProgress
- * @param Component
- * @param nextProps
- * @param renderExpirationTime
- * @return {*}
+ * @param current 当前处理的Fiber对象，可能为空
+ * @param workInProgress 当前处理的Fiber对象的进行中副本
+ * @param Component workInProgress的type，对于原生DOM节点就是字符串；组件就是类或者函数
+ * @param nextProps 异步组件相关
+ * @param renderExpirationTime 当前处理的Fiber所在的FiberRoot的nextExpirationTimeToWorkOn
+ * @return {*} 当前Fiber对象的子级（也是Fiber）或是null
  */
 function updateFunctionComponent(
   current,
@@ -1483,11 +1483,11 @@ function updateContextConsumer(
   */
 
 /**
- * 已经完成工作的阶段进行退出操作。
- * @param current
- * @param workInProgress
- * @param renderExpirationTime
- * @return {Fiber|null}
+ * 对于已经完成更新的节点进行收尾操作，检查其子节点是否更新。
+ * @param current 当前处理的Fiber对象，可能为空
+ * @param workInProgress 当前处理的Fiber对象的进行中副本
+ * @param renderExpirationTime 当前处理的Fiber所在的FiberRoot的nextExpirationTimeToWorkOn
+ * @return {Fiber|null} 当前Fiber对象的子级（也是Fiber）或是null
  */
 function bailoutOnAlreadyFinishedWork(
   current: Fiber | null,
@@ -1498,11 +1498,13 @@ function bailoutOnAlreadyFinishedWork(
 
   if (current !== null) {
     // Reuse previous context list
+    // 翻译：重用上一个context列表。
     workInProgress.firstContextDependency = current.firstContextDependency;
   }
 
   if (enableProfilerTimer) {
     // Don't update "base" render times for bailouts.
+    // 翻译：不要更新断点的“基准”渲染时间。
     stopProfilerTimerIfRunning(workInProgress);
   }
 
@@ -1529,10 +1531,10 @@ function bailoutOnAlreadyFinishedWork(
 
 /**
  * 渲染入口方法，会在src/ReactFiberScheduler.js的performUnitOfWork调用。
- * @param current 当前处理的Fiber对象
+ * @param current 当前处理的Fiber对象，可能为空
  * @param workInProgress 当前处理的Fiber对象的进行中副本
  * @param renderExpirationTime 当前处理的Fiber所在的FiberRoot的nextExpirationTimeToWorkOn
- * @return {Fiber|Fiber.child|Fiber|null|*}
+ * @return {Fiber|Fiber.child|Fiber|null|*} 当前Fiber对象的子级（也是Fiber）或是null
  */
 function beginWork(
   current: Fiber | null,
