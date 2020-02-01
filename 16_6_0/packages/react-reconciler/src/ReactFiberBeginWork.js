@@ -126,11 +126,11 @@ if (__DEV__) {
 }
 
 /**
- * 处理子节点。
- * @param current
- * @param workInProgress
- * @param nextChildren
- * @param renderExpirationTime
+ * 调和子节点。
+ * @param current 当前处理的Fiber对象，可能为空
+ * @param workInProgress 当前处理的Fiber对象的进行中副本
+ * @param nextChildren React元素
+ * @param renderExpirationTime 当前处理的Fiber所在的FiberRoot的nextExpirationTimeToWorkOn
  */
 export function reconcileChildren(
   current: Fiber | null,
@@ -154,7 +154,7 @@ export function reconcileChildren(
       renderExpirationTime,
     );
   } else {
-    // 非第一次渲染。
+    // 非第一次渲染，current.child是存在的。
     // If the current child is the same as the work in progress, it means that
     // we haven't yet started any work on these children. Therefore, we use
     // the clone algorithm to create a copy of all the current children.
@@ -437,7 +437,7 @@ function updateFunctionComponent(
     nextChildren = Component(nextProps, context);
     ReactCurrentFiber.setCurrentPhase(null);
   } else {
-    // Component其实就是用户写的函数组件。props就是我们在函数里接收到的第一个参数。
+    // Component其实就是使用者写的函数组件。props就是我们在函数里接收到的第一个参数。
     // 这里有一个文档里没有提及的点，函数第二个参数是context。
     nextChildren = Component(nextProps, context);
   }
@@ -446,7 +446,7 @@ function updateFunctionComponent(
   // 翻译：React DevTools读取此标志。
   // effectTag使用的是二进制定义的状态标记，或就是添加状态。
   workInProgress.effectTag |= PerformedWork;
-  // 为React元素生成对应的Fiber对象。
+  // 为React元素生成对应的Fiber对象，挂载child。
   reconcileChildren(
     current,
     workInProgress,
@@ -1497,6 +1497,7 @@ function bailoutOnAlreadyFinishedWork(
   cancelWorkTimer(workInProgress);
 
   if (current !== null) {
+    // 非第一次渲染。
     // Reuse previous context list
     // 翻译：重用上一个context列表。
     workInProgress.firstContextDependency = current.firstContextDependency;
@@ -1556,7 +1557,7 @@ function beginWork(
       !hasLegacyContextChanged() &&
       // 没有更新
       (updateExpirationTime === NoWork ||
-        // 优先级不高
+        // 优先级不高（未过期）
         updateExpirationTime > renderExpirationTime)
     ) {
       // This fiber does not have any pending work. Bailout without entering
@@ -1673,7 +1674,7 @@ function beginWork(
       );
     }
     case FunctionComponent: {
-      // type对于原生DOM节点就是字符串；组件就是类或者函数。
+      // 这里的type就是使用者写的函数。
       const Component = workInProgress.type;
       // 新一次渲染产生的props。
       const unresolvedProps = workInProgress.pendingProps;

@@ -239,7 +239,7 @@ function warnOnFunctionType() {
 // 翻译：存在该包装函数是因为我希望克隆每个路径中的代码，以便能够通过尽早分支化来分别优化每个路径。
 //      这需要编译器，或者我们可以手动完成。不需要此分支的辅助函数位于此函数之外。
 /**
- * 子节点调和器的构造函数。
+ * 子节点调和器的包装函数。
  * @param shouldTrackSideEffects 是否应该跟踪副作用
  * @return {reconcileChildFibers}
  * @constructor
