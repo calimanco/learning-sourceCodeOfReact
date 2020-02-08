@@ -694,6 +694,7 @@ function ChildReconciler(shouldTrackSideEffects) {
 
   /**
    * Warns if there is a duplicate or missing key
+   * 翻译：如果密钥重复或丢失，则发出警告。
    */
   function warnOnInvalidKey(
     child: mixed,
@@ -1178,7 +1179,7 @@ function ChildReconciler(shouldTrackSideEffects) {
 
   /**
    * 调和单一节点
-   * @param returnFiber
+   * @param returnFiber 父节点
    * @param currentFirstChild
    * @param portal
    * @param expirationTime
@@ -1231,7 +1232,15 @@ function ChildReconciler(shouldTrackSideEffects) {
   // This API will tag the children with the side-effect of the reconciliation
   // itself. They will be added to the side-effect list as we pass through the
   // children and the parent.
-  // 翻译：此API将使用调和本身的副作用标记子节点。当我们通过子节点和父节点时，它们将被添加到副作用列表中。
+  // 翻译：此API将使用调和自身的副作用标记子节点。当我们通过子节点和父节点时，它们将被添加到副作用列表中。
+  /**
+   * 调和子节点，这个方法也是包装函数的结果。
+   * @param returnFiber 当前处理中的节点的父节点
+   * @param currentFirstChild returnFiber的第一个child
+   * @param newChild 新生成的React元素
+   * @param expirationTime returnFiber所在的FiberRoot的nextExpirationTimeToWorkOn
+   * @return {Fiber|*}
+   */
   function reconcileChildFibers(
     returnFiber: Fiber,
     currentFirstChild: Fiber | null,
@@ -1258,7 +1267,7 @@ function ChildReconciler(shouldTrackSideEffects) {
       newChild.type === REACT_FRAGMENT_TYPE &&
       newChild.key === null;
     if (isUnkeyedTopLevelFragment) {
-      // 这里处理FRAGMENT节点，这种节点没有实际作用，只是包裹。
+      // 这里处理React.Fragment节点，这种节点没有实际作用，只是包裹。
       newChild = newChild.props.children;
     }
 
@@ -1267,6 +1276,7 @@ function ChildReconciler(shouldTrackSideEffects) {
     const isObject = typeof newChild === 'object' && newChild !== null;
 
     if (isObject) {
+      // 单个react元素
       switch (newChild.$$typeof) {
         case REACT_ELEMENT_TYPE:
           // 通过createElement产生的节点。
@@ -1334,9 +1344,12 @@ function ChildReconciler(shouldTrackSideEffects) {
       }
     }
     if (typeof newChild === 'undefined' && !isUnkeyedTopLevelFragment) {
+      // 处理没有新react元素的情况，就是运行完用户编写的函数后无返回值。
       // If the new child is undefined, and the return fiber is a composite
       // component, throw an error. If Fiber return types are disabled,
       // we already threw above.
+      // 翻译：如果新子节点是undefined，并且返回Fiber对象是复合组件，则抛出错误。
+      //      如果Fiber对象的返回类型是禁用类型，我们已经在上面提到了。
       switch (returnFiber.tag) {
         case ClassComponent: {
           if (__DEV__) {
@@ -1349,6 +1362,7 @@ function ChildReconciler(shouldTrackSideEffects) {
         }
         // Intentionally fall through to the next case, which handles both
         // functions and classes
+        // 翻译：故意进入下一个case，该情况同时处理函数和类。
         // eslint-disable-next-lined no-fallthrough
         case FunctionComponent: {
           const Component = returnFiber.type;
@@ -1364,6 +1378,7 @@ function ChildReconciler(shouldTrackSideEffects) {
     }
 
     // Remaining cases are all treated as empty.
+    // 翻译：其余的情况都被视为空的。
     return deleteRemainingChildren(returnFiber, currentFirstChild);
   }
 
