@@ -245,6 +245,11 @@ function warnOnFunctionType() {
  * @constructor
  */
 function ChildReconciler(shouldTrackSideEffects) {
+  /**
+   * 删除子节点。其实是将要删除的Fiber节点加入父级的副作用列表。
+   * @param returnFiber 父级Fiber节点
+   * @param childToDelete 要删除的Fiber节点
+   */
   function deleteChild(returnFiber: Fiber, childToDelete: Fiber): void {
     if (!shouldTrackSideEffects) {
       // Noop.
@@ -255,6 +260,9 @@ function ChildReconciler(shouldTrackSideEffects) {
     // deletions, so we can just append the deletion to the list. The remaining
     // effects aren't added until the complete phase. Once we implement
     // resuming, this may not be true.
+    // 翻译：要删除的对象以相反的顺序添加，因此我们将其添加到最前面。
+    //      此时，返回Fiber对象的副作用列表是空的（除了删除），因此我们可以将要删除的对象添加到列表中。
+    //      其余的副作用要等到整个阶段结束才能添加。一旦执行恢复操作，就可能不正确。
     const last = returnFiber.lastEffect;
     if (last !== null) {
       last.nextEffect = childToDelete;
@@ -266,6 +274,12 @@ function ChildReconciler(shouldTrackSideEffects) {
     childToDelete.effectTag = Deletion;
   }
 
+  /**
+   * 批量删除子节点，会将子节点及其兄弟节点删掉。
+   * @param returnFiber 父级Fiber节点
+   * @param currentFirstChild 要删除的首个Fiber节点
+   * @return {null}
+   */
   function deleteRemainingChildren(
     returnFiber: Fiber,
     currentFirstChild: Fiber | null,
@@ -1114,6 +1128,14 @@ function ChildReconciler(shouldTrackSideEffects) {
     return created;
   }
 
+  /**
+   * 调和单一的React元素节点。
+   * @param returnFiber 当前处理中的节点的父节点
+   * @param currentFirstChild returnFiber的第一个child
+   * @param element 新生成的React元素
+   * @param expirationTime returnFiber所在的FiberRoot的nextExpirationTimeToWorkOn
+   * @return {Fiber}
+   */
   function reconcileSingleElement(
     returnFiber: Fiber,
     currentFirstChild: Fiber | null,

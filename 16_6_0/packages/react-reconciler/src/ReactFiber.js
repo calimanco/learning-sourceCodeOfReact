@@ -530,6 +530,16 @@ export function createHostRootFiber(isConcurrent: boolean): Fiber {
   return createFiber(HostRoot, null, null, mode);
 }
 
+/**
+ * 依据React元素的type个props生成Fiber对象
+ * @param type React元素的type
+ * @param key React元素的key
+ * @param pendingProps React元素的props
+ * @param owner dev下用到的_owner
+ * @param mode 父级Fiber的mode
+ * @param expirationTime 所在的FiberRoot的nextExpirationTimeToWorkOn
+ * @return {Fiber|*}
+ */
 export function createFiberFromTypeAndProps(
   type: any, // React$ElementType
   key: null | string,
@@ -542,6 +552,7 @@ export function createFiberFromTypeAndProps(
 
   let fiberTag = IndeterminateComponent;
   // The resolved type is set if we know what the final type will be. I.e. it's not lazy.
+  // 翻译：如果我们知道最终的类型，则将设置解析类型。 即 这不是偷懒。
   let resolvedType = type;
   if (typeof type === 'function') {
     if (shouldConstruct(type)) {
@@ -584,6 +595,7 @@ export function createFiberFromTypeAndProps(
               break getTag;
             case REACT_CONTEXT_TYPE:
               // This is a consumer
+              // 翻译：这是一个consumer标签
               fiberTag = ContextConsumer;
               break getTag;
             case REACT_FORWARD_REF_TYPE:
@@ -636,6 +648,13 @@ export function createFiberFromTypeAndProps(
   return fiber;
 }
 
+/**
+ * 使用React元素创建Fiber对象
+ * @param element React元素
+ * @param mode 父级Fiber的mode
+ * @param expirationTime 所在的FiberRoot的nextExpirationTimeToWorkOn
+ * @return {Fiber}
+ */
 export function createFiberFromElement(
   element: ReactElement,
   mode: TypeOfMode,
