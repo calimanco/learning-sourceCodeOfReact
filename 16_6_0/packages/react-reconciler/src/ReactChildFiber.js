@@ -370,6 +370,14 @@ function ChildReconciler(shouldTrackSideEffects) {
     return newFiber;
   }
 
+  /**
+   * 更新文本节点。类似reconcileSingleTextNode，但少了清理的功能。
+   * @param returnFiber 当前处理中的节点的父节点
+   * @param current 当前位置的旧Fiber对象
+   * @param textContent 文本节点
+   * @param expirationTime returnFiber所在的FiberRoot的nextExpirationTimeToWorkOn
+   * @return {Fiber}
+   */
   function updateTextNode(
     returnFiber: Fiber,
     current: Fiber | null,
@@ -378,6 +386,7 @@ function ChildReconciler(shouldTrackSideEffects) {
   ) {
     if (current === null || current.tag !== HostText) {
       // Insert
+      // 翻译：插入
       const created = createFiberFromText(
         textContent,
         returnFiber.mode,
@@ -387,6 +396,7 @@ function ChildReconciler(shouldTrackSideEffects) {
       return created;
     } else {
       // Update
+      // 翻译：更新
       const existing = useFiber(current, textContent, expirationTime);
       existing.return = returnFiber;
       return existing;
@@ -539,6 +549,14 @@ function ChildReconciler(shouldTrackSideEffects) {
     return null;
   }
 
+  /**
+   * 更新数组某个位置的Fiber。
+   * @param returnFiber 当前处理中的节点的父节点
+   * @param oldFiber 当前位置的旧Fiber对象
+   * @param newChild 当前位置的新React元素
+   * @param expirationTime returnFiber所在的FiberRoot的nextExpirationTimeToWorkOn
+   * @return {Fiber|null}
+   */
   function updateSlot(
     returnFiber: Fiber,
     oldFiber: Fiber | null,
@@ -546,13 +564,17 @@ function ChildReconciler(shouldTrackSideEffects) {
     expirationTime: ExpirationTime,
   ): Fiber | null {
     // Update the fiber if the keys match, otherwise return null.
+    // 翻译：如果key匹配，则更新Fiber对象，否则返回null。
 
+    // 显示的key。
     const key = oldFiber !== null ? oldFiber.key : null;
 
     if (typeof newChild === 'string' || typeof newChild === 'number') {
       // Text nodes don't have keys. If the previous node is implicitly keyed
       // we can continue to replace it without aborting even if it is not a text
       // node.
+      // 翻译：文本节点没有key。如果前一个节点是隐式key，即使它不是文本节点，
+      //      我们也可以继续替换它而不会中止。
       if (key !== null) {
         return null;
       }
@@ -752,6 +774,14 @@ function ChildReconciler(shouldTrackSideEffects) {
     return knownKeys;
   }
 
+  /**
+   * 调和子节点列表
+   * @param returnFiber 当前处理中的节点的父节点
+   * @param currentFirstChild returnFiber的第一个child
+   * @param newChildren 新生成的React元素列表
+   * @param expirationTime returnFiber所在的FiberRoot的nextExpirationTimeToWorkOn
+   * @return {Fiber}
+   */
   function reconcileChildrenArray(
     returnFiber: Fiber,
     currentFirstChild: Fiber | null,
@@ -762,6 +792,8 @@ function ChildReconciler(shouldTrackSideEffects) {
     // don't have backpointers on fibers. I'm trying to see how far we can get
     // with that model. If it ends up not being worth the tradeoffs, we can
     // add it later.
+    // 翻译：由于我们在Fiber对象上没有反向指针，因此无法通过从两端进行搜索来优化此算法。
+    //      我正在尝试考察该模型可以达到的效果。如果最终不值得权衡，我们可以稍后添加。
 
     // Even with a two ended optimization, we'd want to optimize for the case
     // where there are few changes and brute force the comparison instead of
@@ -770,12 +802,18 @@ function ChildReconciler(shouldTrackSideEffects) {
     // lots of look ahead. This doesn't handle reversal as well as two ended
     // search but that's unusual. Besides, for the two ended optimization to
     // work on Iterables, we'd need to copy the whole set.
+    // 翻译：即使进行了两端优化，我们也希望针对变化不多的情况进行优化，并强行进行比较，而不是使用Map。
+    //      它旨在探索仅前进模式中的那条路，并且只有在我们注意到我们需要大量的前瞻性之后才选择Map。
+    //      这不能处理逆转以及两端搜索，但这是不寻常的。
+    //      此外，为了使两端优化都能在Iterables上运行，我们需要复制整个集合。
 
     // In this first iteration, we'll just live with hitting the bad case
     // (adding everything to a Map) in for every insert/move.
+    // 翻译：在第一个迭代中，我们将为每个插入/移动命中最坏的情况（将所有内容添加到Map）。
 
     // If you change this code, also update reconcileChildrenIterator() which
     // uses the same algorithm.
+    // 翻译：如果更改此代码，则还更新使用相同算法的reconcileChildrenIterator()。
 
     if (__DEV__) {
       // First, validate keys.
@@ -793,13 +831,17 @@ function ChildReconciler(shouldTrackSideEffects) {
     let lastPlacedIndex = 0;
     let newIdx = 0;
     let nextOldFiber = null;
+    // 将新的React元素列表进行遍历。newIdx为新的下标。
     for (; oldFiber !== null && newIdx < newChildren.length; newIdx++) {
       if (oldFiber.index > newIdx) {
+        // 新位置与老位置不匹配，则不再复用老节点。
         nextOldFiber = oldFiber;
         oldFiber = null;
       } else {
+        // 新位置匹配。
         nextOldFiber = oldFiber.sibling;
       }
+      // 更新该位置的新节点。
       const newFiber = updateSlot(
         returnFiber,
         oldFiber,
@@ -1100,6 +1142,14 @@ function ChildReconciler(shouldTrackSideEffects) {
     return resultingFirstChild;
   }
 
+  /**
+   * 调和单一的文本节点
+   * @param returnFiber 当前处理中的节点的父节点
+   * @param currentFirstChild returnFiber的第一个child
+   * @param textContent 新生成的文本内容
+   * @param expirationTime returnFiber所在的FiberRoot的nextExpirationTimeToWorkOn
+   * @return {Fiber}
+   */
   function reconcileSingleTextNode(
     returnFiber: Fiber,
     currentFirstChild: Fiber | null,
@@ -1108,9 +1158,11 @@ function ChildReconciler(shouldTrackSideEffects) {
   ): Fiber {
     // There's no need to check for keys on text nodes since we don't have a
     // way to define them.
+    // 翻译：无需检查文本节点上的key，因为我们没有定义它们的方法。
     if (currentFirstChild !== null && currentFirstChild.tag === HostText) {
       // We already have an existing node so let's just update it and delete
       // the rest.
+      // 翻译：我们已经有一个现有节点，因此让我们对其进行更新，然后删除其余节点。
       deleteRemainingChildren(returnFiber, currentFirstChild.sibling);
       const existing = useFiber(currentFirstChild, textContent, expirationTime);
       existing.return = returnFiber;
@@ -1118,6 +1170,7 @@ function ChildReconciler(shouldTrackSideEffects) {
     }
     // The existing first child is not a text node so we need to create one
     // and delete the existing ones.
+    // 翻译：现有的第一个子节点不是文本节点，因此我们需要创建一个并删除现有的子节点。
     deleteRemainingChildren(returnFiber, currentFirstChild);
     const created = createFiberFromText(
       textContent,

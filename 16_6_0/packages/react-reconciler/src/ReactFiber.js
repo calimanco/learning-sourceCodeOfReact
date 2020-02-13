@@ -552,7 +552,7 @@ export function createFiberFromTypeAndProps(
 
   let fiberTag = IndeterminateComponent;
   // The resolved type is set if we know what the final type will be. I.e. it's not lazy.
-  // 翻译：如果我们知道最终的类型，则将设置解析类型。 即 这不是偷懒。
+  // 翻译：如果我们知道最终的类型，则先将解析类型设置好。那就是说，这不是偷懒。
   let resolvedType = type;
   if (typeof type === 'function') {
     if (shouldConstruct(type)) {
