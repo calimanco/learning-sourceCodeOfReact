@@ -511,22 +511,37 @@ function checkClassInstance(workInProgress: Fiber, ctor: any, newProps: any) {
   }
 }
 
+/**
+ * 挂载updater，连接instance和workInProgress(就是workInProgress.stateNode)，加入ReactInstanceMap
+ * @param workInProgress 处理中的Fiber对象
+ * @param instance 用户写的类
+ */
 function adoptClassInstance(workInProgress: Fiber, instance: any): void {
   instance.updater = classComponentUpdater;
   workInProgress.stateNode = instance;
   // The instance needs access to the fiber so that it can schedule updates
+  // 翻译：该实例需要访问Fiber对象，以便可以安排更新。
+  // 这里的set其实是在instance上增加了_reactInternalFiber属性，指向workInProgress。
   ReactInstanceMap.set(instance, workInProgress);
   if (__DEV__) {
     instance._reactInternalInstance = fakeInternalInstance;
   }
 }
 
+/**
+ * 构造类实例
+ * @param workInProgress 当前处理的Fiber对象的进行中副本
+ * @param ctor workInProgress的type，使用者写的类组件
+ * @param props 新的props对象
+ * @param renderExpirationTime 当前处理的Fiber所在的FiberRoot的nextExpirationTimeToWorkOn
+ */
 function constructClassInstance(
   workInProgress: Fiber,
   ctor: any,
   props: any,
   renderExpirationTime: ExpirationTime,
 ): any {
+  // context相关
   let isLegacyContextConsumer = false;
   let unmaskedContext = emptyContextObject;
   let context = null;
@@ -560,6 +575,7 @@ function constructClassInstance(
   }
 
   // Instantiate twice to help detect side-effects.
+  // 翻译：实例化两次以帮助检测副作用。
   if (__DEV__) {
     if (
       debugRenderPhaseSideEffects ||
@@ -570,11 +586,14 @@ function constructClassInstance(
     }
   }
 
+  // 将使用者写的类实例化，ctor就是使用者的代码。
   const instance = new ctor(props, context);
+  // 将instance的state赋值给workInProgress的memoizedState，这里也是state的初始值。
   const state = (workInProgress.memoizedState =
     instance.state !== null && instance.state !== undefined
       ? instance.state
       : null);
+  // 挂载updater，连接instance和workInProgress(就是workInProgress.stateNode)，加入ReactInstanceMap
   adoptClassInstance(workInProgress, instance);
 
   if (__DEV__) {
@@ -664,6 +683,8 @@ function constructClassInstance(
 
   // Cache unmasked context so we can avoid recreating masked context unless necessary.
   // ReactFiberContext usually updates this cache but can't for newly-created instances.
+  // 翻译：缓存未屏蔽的context，因此除非必要，否则我们可以避免重新创建屏蔽的context。
+  //      ReactFiberContext通常会更新此缓存，但不能用于新创建的实例。
   if (isLegacyContextConsumer) {
     cacheContext(workInProgress, unmaskedContext, context);
   }
@@ -734,6 +755,14 @@ function callComponentWillReceiveProps(
 }
 
 // Invokes the mount life-cycles on a previously never rendered instance.
+// 翻译：在以前从未渲染过的实例上调用mount生命周期。
+/**
+ * 挂载类实例。
+ * @param workInProgress 当前处理的Fiber对象的进行中副本
+ * @param ctor workInProgress的type，使用者写的类组件
+ * @param newProps 新的props对象
+ * @param renderExpirationTime 当前处理的Fiber所在的FiberRoot的nextExpirationTimeToWorkOn
+ */
 function mountClassInstance(
   workInProgress: Fiber,
   ctor: any,
@@ -745,10 +774,12 @@ function mountClassInstance(
   }
 
   const instance = workInProgress.stateNode;
+  // 写入props，state和refs，这也是我们使用的this.props，this.state，this.refs。
   instance.props = newProps;
   instance.state = workInProgress.memoizedState;
   instance.refs = emptyRefsObject;
 
+  // 处理context。
   const contextType = ctor.contextType;
   if (typeof contextType === 'object' && contextType !== null) {
     instance.context = readContext(contextType);
@@ -792,8 +823,10 @@ function mountClassInstance(
     }
   }
 
+  // 处理update。
   let updateQueue = workInProgress.updateQueue;
   if (updateQueue !== null) {
+    // 这里会改变workInProgress和updateQueue。
     processUpdateQueue(
       workInProgress,
       updateQueue,
@@ -804,28 +837,34 @@ function mountClassInstance(
     instance.state = workInProgress.memoizedState;
   }
 
+  // 这里getDerivedStateFromProps是一个生命周期方法，React16新增。
   const getDerivedStateFromProps = ctor.getDerivedStateFromProps;
   if (typeof getDerivedStateFromProps === 'function') {
+    // 如果有这个生命周期方法的定义，就执行它。
     applyDerivedStateFromProps(
       workInProgress,
       ctor,
       getDerivedStateFromProps,
       newProps,
     );
+    // 重新把结果写入。
     instance.state = workInProgress.memoizedState;
   }
 
   // In order to support react-lifecycles-compat polyfilled components,
   // Unsafe lifecycles should not be invoked for components using the new APIs.
+  // 翻译：为了支持与react生命周期兼容的polyfilled组件，不安全的生命周期不应该使用新的API进行调用。
   if (
     typeof ctor.getDerivedStateFromProps !== 'function' &&
     typeof instance.getSnapshotBeforeUpdate !== 'function' &&
     (typeof instance.UNSAFE_componentWillMount === 'function' ||
       typeof instance.componentWillMount === 'function')
   ) {
+    // 执行componentWillMount生命周期方法
     callComponentWillMount(workInProgress, instance);
     // If we had additional state updates during this life-cycle, let's
     // process them now.
+    // 翻译：如果在此生命周期中还有其他状态更新，请立即进行处理。
     updateQueue = workInProgress.updateQueue;
     if (updateQueue !== null) {
       processUpdateQueue(
@@ -844,17 +883,28 @@ function mountClassInstance(
   }
 }
 
+/**
+ * 恢复被中断的组件。
+ * @param workInProgress 当前处理的Fiber对象的进行中副本
+ * @param ctor workInProgress的type，使用者写的类组件
+ * @param newProps 新的props对象
+ * @param renderExpirationTime 当前处理的Fiber所在的FiberRoot的nextExpirationTimeToWorkOn
+ * @return {boolean|*}
+ */
 function resumeMountClassInstance(
   workInProgress: Fiber,
   ctor: any,
   newProps: any,
   renderExpirationTime: ExpirationTime,
 ): boolean {
+  // 组件类实例。
   const instance = workInProgress.stateNode;
 
+  // 写入props。
   const oldProps = workInProgress.memoizedProps;
   instance.props = oldProps;
 
+  // 处理context相关。
   const oldContext = instance.context;
   const contextType = ctor.contextType;
   let nextContext;
@@ -877,9 +927,12 @@ function resumeMountClassInstance(
   // Note: During these life-cycles, instance.props/instance.state are what
   // ever the previously attempted to render - not the "current". However,
   // during componentDidUpdate we pass the "current" props.
+  // 翻译：注意：在这个生命周期期间，instance.props和instance.state是以前试图渲染的内容，而不是"current"。
+  //      但是，在componentDidUpdate中我们传递了"current"的props。
 
   // In order to support react-lifecycles-compat polyfilled components,
   // Unsafe lifecycles should not be invoked for components using the new APIs.
+  // 翻译：为了支持与react生命周期兼容的polyfilled组件，不安全的生命周期不应该使用新的API进行调用。
   if (
     !hasNewLifecycles &&
     (typeof instance.UNSAFE_componentWillReceiveProps === 'function' ||

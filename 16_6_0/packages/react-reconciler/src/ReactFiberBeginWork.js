@@ -413,7 +413,7 @@ function markRef(current: Fiber | null, workInProgress: Fiber) {
  * 更新函数组件。
  * @param current 当前处理的Fiber对象，可能为空
  * @param workInProgress 当前处理的Fiber对象的进行中副本
- * @param Component workInProgress的type，对于原生DOM节点就是字符串；组件就是类或者函数
+ * @param Component workInProgress的type，使用者写的函数组件
  * @param nextProps 异步组件相关
  * @param renderExpirationTime 当前处理的Fiber所在的FiberRoot的nextExpirationTimeToWorkOn
  * @return {*} 当前Fiber对象的子级（也是Fiber）或是null
@@ -457,6 +457,15 @@ function updateFunctionComponent(
   return workInProgress.child;
 }
 
+/**
+ * 更新类组件
+ * @param current 当前处理的Fiber对象，可能为空
+ * @param workInProgress 当前处理的Fiber对象的进行中副本
+ * @param Component workInProgress的type，使用者写的类组件
+ * @param nextProps 异步组件相关
+ * @param renderExpirationTime 当前处理的Fiber所在的FiberRoot的nextExpirationTimeToWorkOn
+ * @return {Fiber|Fiber.child}
+ */
 function updateClassComponent(
   current: Fiber | null,
   workInProgress: Fiber,
@@ -467,6 +476,10 @@ function updateClassComponent(
   // Push context providers early to prevent context stack mismatches.
   // During mounting we don't know the child context yet as the instance doesn't exist.
   // We will invalidate the child context in finishClassComponent() right after rendering.
+  // 翻译：尽早推送context providers，以防止context堆栈不匹配。
+  //      在挂载期间，我们还不知道子节点的context，因为该实例不存在。
+  //      渲染后，我们将在finishClassComponent()中使子节点的context无效。
+  // context相关
   let hasContext;
   if (isLegacyContextProvider(Component)) {
     hasContext = true;
@@ -476,20 +489,30 @@ function updateClassComponent(
   }
   prepareToReadContext(workInProgress, renderExpirationTime);
 
+  // instance即是new操作类返回的实例对象。
   const instance = workInProgress.stateNode;
   let shouldUpdate;
   if (instance === null) {
     if (current !== null) {
+      // 第一次渲染，但却有current，这种特殊情况会出现在suspend组件时。
       // An class component without an instance only mounts if it suspended
       // inside a non- concurrent tree, in an inconsistent state. We want to
       // tree it like a new mount, even though an empty version of it already
       // committed. Disconnect the alternate pointers.
+      // 翻译：没有实例的类组件只有在以非同步状态挂载在非并发树中时才挂载。
+      //      尽管它已经提交了一个空版本，但我们仍希望像新的挂载一样将其树化。断开alternate指针。
       current.alternate = null;
       workInProgress.alternate = null;
       // Since this is conceptually a new fiber, schedule a Placement effect
+      // 翻译：由于从概念上讲这是一个新Fiber对象，因此请安排"Placement"操作。
       workInProgress.effectTag |= Placement;
     }
     // In the initial pass we might need to construct the instance.
+    // 翻译：在最初的过程中，我们可能需要构造实例。
+    // 第一次渲染的情况。
+    // 这个方法会生成实例，并建立实例与workInProgress直接的联系.
+    // 经过这个步骤后workInProgress.stateNode会等于这个新实例，
+    // workInProgress.memoizedState也会写入初始的state。
     constructClassInstance(
       workInProgress,
       Component,
@@ -505,6 +528,8 @@ function updateClassComponent(
     shouldUpdate = true;
   } else if (current === null) {
     // In a resume, we'll already have an instance we can reuse.
+    // 翻译：在恢复中，我们已经有一个可以重用的实例。
+    // 处理被中断渲染的情况。
     shouldUpdate = resumeMountClassInstance(
       workInProgress,
       Component,
@@ -512,6 +537,7 @@ function updateClassComponent(
       renderExpirationTime,
     );
   } else {
+    // 第二次渲染的正常情况。
     shouldUpdate = updateClassInstance(
       current,
       workInProgress,
@@ -771,9 +797,16 @@ function updateHostText(current, workInProgress) {
   return null;
 }
 
+/**
+ * 处理组件默认的props值
+ * @param Component 使用者写的代码，函数组件就是函数、类组件就是类对象
+ * @param baseProps workInProgress上的pendingProps
+ * @return {*}
+ */
 function resolveDefaultProps(Component, baseProps) {
   if (Component && Component.defaultProps) {
     // Resolve default props. Taken from ReactElement
+    // 翻译：读取默认props。取自ReactElement
     const props = Object.assign({}, baseProps);
     const defaultProps = Component.defaultProps;
     for (let propName in defaultProps) {
@@ -1678,7 +1711,7 @@ function beginWork(
       const Component = workInProgress.type;
       // 新一次渲染产生的props。
       const unresolvedProps = workInProgress.pendingProps;
-      // 异步组件相关。
+      // 处理props。
       const resolvedProps =
         workInProgress.elementType === Component
           ? unresolvedProps
