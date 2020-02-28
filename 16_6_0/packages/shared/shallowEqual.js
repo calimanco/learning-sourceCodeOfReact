@@ -29,9 +29,12 @@ function is(x, y) {
 }
 
 /**
+ * 浅等比较。
  * Performs equality by iterating through keys on an object and returning false
  * when any key has values which are not strictly equal between the arguments.
  * Returns true when the values of all keys are strictly equal.
+ * 翻译：通过迭代对象上的键并在任何键的值在参数之间严格相等时返回false来执行相等操作。
+ *      当所有键的值严格相等时返回true。
  */
 function shallowEqual(objA: mixed, objB: mixed): boolean {
   if (is(objA, objB)) {
@@ -55,6 +58,7 @@ function shallowEqual(objA: mixed, objB: mixed): boolean {
   }
 
   // Test for A's keys different from B.
+  // 翻译：检查A的key是否不同于B。
   for (let i = 0; i < keysA.length; i++) {
     if (
       !hasOwnProperty.call(objB, keysA[i]) ||

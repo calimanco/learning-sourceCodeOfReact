@@ -693,10 +693,17 @@ function callCallback(callback, context) {
   callback.call(context);
 }
 
+/**
+ * 重置hasForceUpdate为false。
+ */
 export function resetHasForceUpdateBeforeProcessing() {
   hasForceUpdate = false;
 }
 
+/**
+ * 读取hasForceUpdate的值。
+ * @return {boolean}
+ */
 export function checkHasForceUpdateAfterProcessing(): boolean {
   return hasForceUpdate;
 }
