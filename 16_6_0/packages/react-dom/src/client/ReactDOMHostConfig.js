@@ -251,6 +251,12 @@ export function prepareUpdate(
   );
 }
 
+/**
+ * 判断节点内是否是文本内容。
+ * @param type
+ * @param props
+ * @return {boolean}
+ */
 export function shouldSetTextContent(type: string, props: Props): boolean {
   return (
     type === 'textarea' ||
@@ -264,6 +270,12 @@ export function shouldSetTextContent(type: string, props: Props): boolean {
   );
 }
 
+/**
+ * 属性是否是hidden。
+ * @param type
+ * @param props
+ * @return {boolean}
+ */
 export function shouldDeprioritizeSubtree(type: string, props: Props): boolean {
   return !!props.hidden;
 }

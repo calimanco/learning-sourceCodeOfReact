@@ -529,6 +529,13 @@ if (supportsMutation) {
   };
 }
 
+/**
+ * 完成节点的工作。
+ * @param current 当前处理的Fiber对象
+ * @param workInProgress 当前处理的Fiber对象的进行中副本
+ * @param renderExpirationTime 当前处理的Fiber所在的FiberRoot的nextExpirationTimeToWorkOn
+ * @return {null}
+ */
 function completeWork(
   current: Fiber | null,
   workInProgress: Fiber,

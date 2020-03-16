@@ -67,6 +67,7 @@ import {
 import {processUpdateQueue} from './ReactUpdateQueue';
 import {NoWork, Never} from './ReactFiberExpirationTime';
 import {ConcurrentMode, StrictMode} from './ReactTypeOfMode';
+// 文件实际在 packages/react-dom/src/client/ReactDOMHostConfig.js
 import {
   shouldSetTextContent,
   shouldDeprioritizeSubtree,
@@ -129,7 +130,7 @@ if (__DEV__) {
  * 调和子节点。
  * @param current 当前处理的Fiber对象，可能为空
  * @param workInProgress 当前处理的Fiber对象的进行中副本
- * @param nextChildren React元素
+ * @param nextChildren 新的React元素
  * @param renderExpirationTime 当前处理的Fiber所在的FiberRoot的nextExpirationTimeToWorkOn
  */
 export function reconcileChildren(
@@ -173,6 +174,13 @@ export function reconcileChildren(
   }
 }
 
+/**
+ * 强制更新子节点。
+ * @param current 当前处理的Fiber对象，可能为空
+ * @param workInProgress 当前处理的Fiber对象的进行中副本
+ * @param nextChildren 新的React元素
+ * @param renderExpirationTime 当前处理的Fiber所在的FiberRoot的nextExpirationTimeToWorkOn
+ */
 function forceUnmountCurrentAndReconcile(
   current: Fiber,
   workInProgress: Fiber,
@@ -183,10 +191,13 @@ function forceUnmountCurrentAndReconcile(
   // want to reconcile without matching against the existing set. This has the
   // effect of all current children being unmounted; even if the type and key
   // are the same, the old child is unmounted and a new child is created.
+  // 翻译：此功能是reconcileChildren的分支。在我们希望不与现有集合匹配的情况下进行调和时使用。
+  //      这会导致当前所有子级都被卸载；即使类型和键相同，也会卸载旧的子项并创建一个新的子项。
   //
   // To do this, we're going to go through the reconcile algorithm twice. In
   // the first pass, we schedule a deletion for all the current children by
   // passing null.
+  // 翻译：为此，我们将两次进行协调算法。在第一次遍历中，我们通过传递null删除当前所有子节点。
   workInProgress.child = reconcileChildFibers(
     workInProgress,
     current.child,
@@ -197,6 +208,8 @@ function forceUnmountCurrentAndReconcile(
   // pass null in place of where we usually pass the current child set. This has
   // the effect of remounting all children regardless of whether their their
   // identity matches.
+  // 翻译：在第二次遍历中，我们挂载了新的子节点。这里的窍门是我们传递null来代替通常传递当前子节点的位置。
+  //      这具有重新挂载所有子节点的作用，无论其类型是否匹配。
   workInProgress.child = reconcileChildFibers(
     workInProgress,
     null,
@@ -205,6 +218,15 @@ function forceUnmountCurrentAndReconcile(
   );
 }
 
+/**
+ * 更新ForwardRef节点
+ * @param current 当前处理的Fiber对象，可能为空
+ * @param workInProgress 当前处理的Fiber对象的进行中副本
+ * @param type workInProgress的type，也是React.forwardRef的返回内容。
+ * @param nextProps 新的props对象
+ * @param renderExpirationTime 当前处理的Fiber所在的FiberRoot的nextExpirationTimeToWorkOn
+ * @return {Fiber}
+ */
 function updateForwardRef(
   current: Fiber | null,
   workInProgress: Fiber,
@@ -212,12 +234,17 @@ function updateForwardRef(
   nextProps: any,
   renderExpirationTime: ExpirationTime,
 ) {
+  // 这个render就是React.forwardRef传递的回调函数。
   const render = type.render;
+  // 取出当前fiber对象的引用。
   const ref = workInProgress.ref;
   if (hasLegacyContextChanged()) {
     // Normally we can bail out on props equality but if context has changed
     // we don't do the bailout and we have to reuse existing props instead.
+    // 翻译：通常情况下，当新旧props相等时我们可以执行跳出操作，但是如果context发生变化，
+    //      我们将不进行跳出，而必须重用现有的props。
   } else if (workInProgress.memoizedProps === nextProps) {
+    // 新旧props没有改变，如果ref也没变则可以跳出。
     const currentRef = current !== null ? current.ref : null;
     if (ref === currentRef) {
       return bailoutOnAlreadyFinishedWork(
@@ -235,9 +262,12 @@ function updateForwardRef(
     nextChildren = render(nextProps, ref);
     ReactCurrentFiber.setCurrentPhase(null);
   } else {
+    // 这个就是回调函数接受的两个参数。React.forwardRef((props, ref) => ());
+    // 由此可见ref是来自workInProgress.ref，可能会没有。
     nextChildren = render(nextProps, ref);
   }
 
+  // 重新渲染，调和子节点。
   reconcileChildren(
     current,
     workInProgress,
@@ -247,6 +277,16 @@ function updateForwardRef(
   return workInProgress.child;
 }
 
+/**
+ * 更新Memo组件，有记忆效果的函数组件。
+ * @param current 当前处理的Fiber对象，可能为空
+ * @param workInProgress 当前处理的Fiber对象的进行中副本
+ * @param Component workInProgress的type，React.memo返回的内容
+ * @param nextProps 新的props对象
+ * @param updateExpirationTime workInProgress上的expirationTime
+ * @param renderExpirationTime 当前处理的Fiber所在的FiberRoot的nextExpirationTimeToWorkOn
+ * @return {Fiber}
+ */
 function updateMemoComponent(
   current: Fiber | null,
   workInProgress: Fiber,
@@ -256,12 +296,19 @@ function updateMemoComponent(
   renderExpirationTime: ExpirationTime,
 ): null | Fiber {
   if (current === null) {
+    // type就是函数组件。
     let type = Component.type;
+    // isSimpleFunctionComponent是用来判断函数组件是否有默认值的函数，没有默认值则为true。
+    // compare就是使用memo的时候传入的第二个参数，一个对比新旧props的函数。
     if (isSimpleFunctionComponent(type) && Component.compare === null) {
       // If this is a plain function component without default props,
       // and with only the default shallow comparison, we upgrade it
       // to a SimpleMemoComponent to allow fast path updates.
+      // 翻译：如果这是一个没有默认props的纯函数组件，并且仅具有默认的浅表比较，
+      //      则我们将其升级为SimpleMemoComponent以允许快速更新路径。
+      // 这里会改写tag，这会导致以后这个节点更新将直接进入updateSimpleMemoComponent。
       workInProgress.tag = SimpleMemoComponent;
+      // type也被改写成函数组件。
       workInProgress.type = type;
       return updateSimpleMemoComponent(
         current,
@@ -272,6 +319,7 @@ function updateMemoComponent(
         renderExpirationTime,
       );
     }
+    // 直接生成子节点，因为它的子节点很明确是一个函数组件。
     let child = createFiberFromTypeAndProps(
       Component.type,
       null,
@@ -285,6 +333,7 @@ function updateMemoComponent(
     workInProgress.child = child;
     return child;
   }
+  // 二次渲染的情况。
   let currentChild = ((current.child: any): Fiber); // This is always exactly one child
   if (
     updateExpirationTime === NoWork ||
@@ -292,8 +341,10 @@ function updateMemoComponent(
   ) {
     // This will be the props with resolved defaultProps,
     // unlike current.memoizedProps which will be the unresolved ones.
+    // 翻译：这将是带有解析过的默认值的props，跟未解析的current.memoizedProps不同。
     const prevProps = currentChild.memoizedProps;
     // Default to shallow comparison
+    // 翻译：默认进行浅比较。
     let compare = Component.compare;
     compare = compare !== null ? compare : shallowEqual;
     if (compare(prevProps, nextProps) && current.ref === workInProgress.ref) {
@@ -315,6 +366,16 @@ function updateMemoComponent(
   return newChild;
 }
 
+/**
+ * 更新纯的带记忆功能的函数组件。（没有默认值和自定义判断是否更新的函数）
+ * @param current 当前处理的Fiber对象，可能为空
+ * @param workInProgress 当前处理的Fiber对象的进行中副本
+ * @param Component workInProgress的type，使用者写的函数组件
+ * @param nextProps 新的props对象
+ * @param updateExpirationTime workInProgress上的expirationTime
+ * @param renderExpirationTime 当前处理的Fiber所在的FiberRoot的nextExpirationTimeToWorkOn
+ * @return {Fiber|*}
+ */
 function updateSimpleMemoComponent(
   current: Fiber | null,
   workInProgress: Fiber,
@@ -324,15 +385,19 @@ function updateSimpleMemoComponent(
   renderExpirationTime: ExpirationTime,
 ): null | Fiber {
   if (
+    // 二次渲染。
     current !== null &&
+    // 没有更新任务或优先级较低。
     (updateExpirationTime === NoWork ||
       updateExpirationTime > renderExpirationTime)
   ) {
     const prevProps = current.memoizedProps;
     if (
+      // 浅比较新旧props。
       shallowEqual(prevProps, nextProps) &&
       current.ref === workInProgress.ref
     ) {
+      // 判断不需要更新，跳出。
       return bailoutOnAlreadyFinishedWork(
         current,
         workInProgress,
@@ -340,6 +405,7 @@ function updateSimpleMemoComponent(
       );
     }
   }
+  // 需要更新，本质还是函数组件。
   return updateFunctionComponent(
     current,
     workInProgress,
@@ -364,6 +430,13 @@ function updateFragment(
   return workInProgress.child;
 }
 
+/**
+ * 更新React内置的特殊组件，比如ConcurrentMode和StrictMode。
+ * @param current 当前处理的Fiber对象，可能为空
+ * @param workInProgress 当前处理的Fiber对象的进行中副本
+ * @param renderExpirationTime 当前处理的Fiber所在的FiberRoot的nextExpirationTimeToWorkOn
+ * @return {Fiber}
+ */
 function updateMode(
   current: Fiber | null,
   workInProgress: Fiber,
@@ -414,7 +487,7 @@ function markRef(current: Fiber | null, workInProgress: Fiber) {
  * @param current 当前处理的Fiber对象，可能为空
  * @param workInProgress 当前处理的Fiber对象的进行中副本
  * @param Component workInProgress的type，使用者写的函数组件
- * @param nextProps 异步组件相关
+ * @param nextProps 新的props对象
  * @param renderExpirationTime 当前处理的Fiber所在的FiberRoot的nextExpirationTimeToWorkOn
  * @return {*} 当前Fiber对象的子级（也是Fiber）或是null
  */
@@ -462,7 +535,7 @@ function updateFunctionComponent(
  * @param current 当前处理的Fiber对象，可能为空
  * @param workInProgress 当前处理的Fiber对象的进行中副本
  * @param Component workInProgress的type，使用者写的类组件
- * @param nextProps 异步组件相关
+ * @param nextProps 新的props对象
  * @param renderExpirationTime 当前处理的Fiber所在的FiberRoot的nextExpirationTimeToWorkOn
  * @return {Fiber|Fiber.child}
  */
@@ -556,6 +629,16 @@ function updateClassComponent(
   );
 }
 
+/**
+ * 结束类组件更新。
+ * @param current 当前处理的Fiber对象，可能为空
+ * @param workInProgress 当前处理的Fiber对象的进行中副本
+ * @param Component workInProgress的type，使用者写的类组件
+ * @param shouldUpdate 是否需要更新的标记
+ * @param hasContext 是否有context相关的标记
+ * @param renderExpirationTime 当前处理的Fiber所在的FiberRoot的nextExpirationTimeToWorkOn
+ * @return {Fiber}
+ */
 function finishClassComponent(
   current: Fiber | null,
   workInProgress: Fiber,
@@ -565,16 +648,21 @@ function finishClassComponent(
   renderExpirationTime: ExpirationTime,
 ) {
   // Refs should update even if shouldComponentUpdate returns false
+  // 翻译：引用应该更新，即使shouldComponentUpdate返回false
   markRef(current, workInProgress);
 
+  // 是否有抛出错误的标记。
   const didCaptureError = (workInProgress.effectTag & DidCapture) !== NoEffect;
 
   if (!shouldUpdate && !didCaptureError) {
+    // 不需要更新并且没有错误抛出，则可以跳过这个节点的处理。
     // Context providers should defer to sCU for rendering
+    // 翻译：context提供者应遵照sCU进行渲染
     if (hasContext) {
       invalidateContextProvider(workInProgress, Component, false);
     }
 
+    // 收尾，返回当前的子级或null。
     return bailoutOnAlreadyFinishedWork(
       current,
       workInProgress,
@@ -582,9 +670,11 @@ function finishClassComponent(
     );
   }
 
+  // 取出实例。
   const instance = workInProgress.stateNode;
 
   // Rerender
+  // 标记当前节点。
   ReactCurrentOwner.current = workInProgress;
   let nextChildren;
   if (
@@ -595,6 +685,8 @@ function finishClassComponent(
     // unmount all the children. componentDidCatch will schedule an update to
     // re-render a fallback. This is temporary until we migrate everyone to
     // the new API.
+    // 翻译：如果我们捕获了一个错误，但getDerivedStateFrom的捕获方法未定义，则卸载所有子项。
+    //      componentDidCatch将安排更新以重新渲染后备。这是暂时的，直到我们将所有人都迁移到新的API为止。
     // TODO: Warn in a future release.
     nextChildren = null;
 
@@ -619,12 +711,17 @@ function finishClassComponent(
   }
 
   // React DevTools reads this flag.
+  // 翻译：React开发工具的标记。
   workInProgress.effectTag |= PerformedWork;
   if (current !== null && didCaptureError) {
+    // 二次渲染，并有错误捕获。
     // If we're recovering from an error, reconcile without reusing any of
     // the existing children. Conceptually, the normal children and the children
     // that are shown on error are two different sets, so we shouldn't reuse
     // normal children even if their identities match.
+    // 翻译：如果我们要从错误中恢复过来，请在不复用任何现有子级的情况下进行调和。
+    //      从概念上讲，正常子节点和显示错误的子节点是两个不同的集合，
+    //      因此，即使他们的类型匹配，我们也不应该重用正常子节点。
     forceUnmountCurrentAndReconcile(
       current,
       workInProgress,
@@ -641,10 +738,12 @@ function finishClassComponent(
   }
 
   // Memoize state using the values we just used to render.
+  // 翻译：使用我们刚刚用于渲染的值来写入记忆的state。
   // TODO: Restructure so we never read values from the instance.
   workInProgress.memoizedState = instance.state;
 
   // The context might have changed so we need to recalculate it.
+  // 翻译：context可能已更改，因此我们需要重新计算。
   if (hasContext) {
     invalidateContextProvider(workInProgress, Component, true);
   }
@@ -667,8 +766,17 @@ function pushHostRootContext(workInProgress) {
   pushHostContainer(workInProgress, root.containerInfo);
 }
 
+/**
+ * 更新根节点。
+ * @param current 当前处理的Fiber对象，可能为空
+ * @param workInProgress 当前处理的Fiber对象的进行中副本
+ * @param renderExpirationTime 当前处理的Fiber所在的FiberRoot的nextExpirationTimeToWorkOn
+ * @return {Fiber|*}
+ */
 function updateHostRoot(current, workInProgress, renderExpirationTime) {
+  // context相关。
   pushHostRootContext(workInProgress);
+  // 取出更新队列。
   const updateQueue = workInProgress.updateQueue;
   invariant(
     updateQueue !== null,
@@ -676,9 +784,13 @@ function updateHostRoot(current, workInProgress, renderExpirationTime) {
       'bailed out. This error is likely caused by a bug in React. Please ' +
       'file an issue.',
   );
+  // 新的props。
   const nextProps = workInProgress.pendingProps;
+  // 旧的state。
   const prevState = workInProgress.memoizedState;
+  // 对于hostRoot来说state.element就是存放ReactElement。
   const prevChildren = prevState !== null ? prevState.element : null;
+  // update对象的payload属性里只有element一个属性，其实就是更新workInProgress.memoizedState。
   processUpdateQueue(
     workInProgress,
     updateQueue,
@@ -686,14 +798,19 @@ function updateHostRoot(current, workInProgress, renderExpirationTime) {
     null,
     renderExpirationTime,
   );
+  // 更新后的新state
   const nextState = workInProgress.memoizedState;
   // Caution: React DevTools currently depends on this property
   // being called "element".
+  // 翻译：警告：React DevTools当前依赖于此属性，称为“element”。
   const nextChildren = nextState.element;
   if (nextChildren === prevChildren) {
     // If the state is the same as before, that's a bailout because we had
     // no work that expires at this time.
+    // 翻译：如果状态与以前相同，则是可以跳过，因为我们目前尚无任何工作到期。
+    // 复用服务端渲染的节点相关。
     resetHydrationState();
+    // 结束。
     return bailoutOnAlreadyFinishedWork(
       current,
       workInProgress,
@@ -710,16 +827,22 @@ function updateHostRoot(current, workInProgress, renderExpirationTime) {
     // We always try to hydrate. If this isn't a hydration pass there won't
     // be any children to hydrate which is effectively the same thing as
     // not hydrating.
+    // 翻译：如果我们目前没有子节点，这可能是第一次遍历。我们总是尝试进行hydrate。
+    //      如果这不是一次需要hydrate的遍历，那么就不会有任何子节点进行hydrate，
+    //      这与不执行hydrate实际上是一回事。
 
     // This is a bit of a hack. We track the host root as a placement to
     // know that we're currently in a mounting state. That way isMounted
     // works as expected. We must reset this before committing.
+    // 翻译：这是一个有点hack的方法。我们跟踪主root作为位置，以了解我们当前处于挂载状态。
+    //      这样，isMounted可以按预期工作。我们必须在提交之前重置此设置。
     // TODO: Delete this when we delete isMounted and findDOMNode.
     workInProgress.effectTag |= Placement;
 
     // Ensure that children mount into this root without tracking
     // side-effects. This ensures that we don't store Placement effects on
     // nodes that will be hydrated.
+    // 翻译：确保子节点挂载在该root中而不会跟踪副作用。这确保了我们不会在执行hydrate的节点上存储Placement效果。
     workInProgress.child = mountChildFibers(
       workInProgress,
       null,
@@ -729,6 +852,7 @@ function updateHostRoot(current, workInProgress, renderExpirationTime) {
   } else {
     // Otherwise reset hydration state in case we aborted and resumed another
     // root.
+    // 翻译：否则，重置hydrate的状态，以防我们中止并恢复另一个root。
     reconcileChildren(
       current,
       workInProgress,
@@ -740,10 +864,19 @@ function updateHostRoot(current, workInProgress, renderExpirationTime) {
   return workInProgress.child;
 }
 
+/**
+ * 更新原生节。
+ * @param current 当前处理的Fiber对象，可能为空
+ * @param workInProgress 当前处理的Fiber对象的进行中副本
+ * @param renderExpirationTime 当前处理的Fiber所在的FiberRoot的nextExpirationTimeToWorkOn
+ * @return {null|*}
+ */
 function updateHostComponent(current, workInProgress, renderExpirationTime) {
+  // context相关。
   pushHostContext(workInProgress);
 
   if (current === null) {
+    // 第一次渲染时，对服务器渲染的节点进行hydrate（融合操作）。
     tryToClaimNextHydratableInstance(workInProgress);
   }
 
@@ -752,6 +885,7 @@ function updateHostComponent(current, workInProgress, renderExpirationTime) {
   const prevProps = current !== null ? current.memoizedProps : null;
 
   let nextChildren = nextProps.children;
+  // 判断节点内是否是文本内容。包括：textarea标签、option标签、noscript标签、标签里直接是文本。
   const isDirectTextChild = shouldSetTextContent(type, nextProps);
 
   if (isDirectTextChild) {
@@ -759,22 +893,32 @@ function updateHostComponent(current, workInProgress, renderExpirationTime) {
     // case. We won't handle it as a reified child. We will instead handle
     // this in the host environment that also have access to this prop. That
     // avoids allocating another HostText fiber and traversing it.
+    // 翻译：我们特殊处理根节点的节点内是文本内容的情况。这个是一般的情况。我们不会将其作为子节点来处理。
+    //      相反，我们将在也可以访问此prop的宿主节点环境中处理此问题。
+    //      这样可以避免分配另一个HostText Fiber对象并遍历它。
     nextChildren = null;
   } else if (prevProps !== null && shouldSetTextContent(type, prevProps)) {
     // If we're switching from a direct text child to a normal child, or to
     // empty, we need to schedule the text content to be reset.
+    // 翻译：如果我们要从节点内是文本内容切换到普通子项，或者要切换为空，则需要安排要重置的文本内容。
     workInProgress.effectTag |= ContentReset;
   }
 
   markRef(current, workInProgress);
 
   // Check the host config to see if the children are offscreen/hidden.
+  // 翻译：检查该节点的设置，以查看子代是否处于屏幕外/隐藏状态。
   if (
+    // FiberRoot的过期时间不是Never。
     renderExpirationTime !== Never &&
+    // 在异步渲染模式下。
     workInProgress.mode & ConcurrentMode &&
+    // props有hidden属性。
     shouldDeprioritizeSubtree(type, nextProps)
   ) {
     // Schedule this fiber to re-render at offscreen priority. Then bailout.
+    // 安排此Fiber对象以离屏优先级重新渲染。然后跳过渲染。
+    // 让这个节点的优先级降到最低。
     workInProgress.expirationTime = Never;
     return null;
   }
@@ -788,12 +932,20 @@ function updateHostComponent(current, workInProgress, renderExpirationTime) {
   return workInProgress.child;
 }
 
+/**
+ * 更新文本节点。
+ * @param current 当前处理的Fiber对象，可能为空
+ * @param workInProgress 当前处理的Fiber对象的进行中副本
+ * @return {null}
+ */
 function updateHostText(current, workInProgress) {
   if (current === null) {
+    // 第一次渲染时，对服务器渲染的节点进行hydrate（融合操作）。
     tryToClaimNextHydratableInstance(workInProgress);
   }
   // Nothing to do here. This is terminal. We'll do the completion step
   // immediately after.
+  // 翻译：没有其他操作。这是终点。之后，我们将立即执行完成步骤。
   return null;
 }
 
@@ -963,6 +1115,14 @@ function mountIncompleteClassComponent(
   );
 }
 
+/**
+ * 挂载不确定组件。
+ * @param _current 当前处理的Fiber对象，可能为空
+ * @param workInProgress 当前处理的Fiber对象的进行中副本
+ * @param Component workInProgress的type，使用者写的类组件
+ * @param renderExpirationTime 当前处理的Fiber所在的FiberRoot的nextExpirationTimeToWorkOn
+ * @return {Fiber|*}
+ */
 function mountIndeterminateComponent(
   _current,
   workInProgress,
@@ -970,13 +1130,17 @@ function mountIndeterminateComponent(
   renderExpirationTime,
 ) {
   if (_current !== null) {
+    // 一般这个函数只会在首次渲染时调用，出现这种特殊情况，可能是中断造成的。
     // An indeterminate component only mounts if it suspended inside a non-
     // concurrent tree, in an inconsistent state. We want to tree it like
     // a new mount, even though an empty version of it already committed.
     // Disconnect the alternate pointers.
+    // 翻译：不确定的组件仅在其以不一致的状态被中断挂起在非并发树中时挂载。
+    //      尽管它已经提交了一个空版本，但我们仍希望像新的挂载一样将其树化。断开alternate指针。
     _current.alternate = null;
     workInProgress.alternate = null;
     // Since this is conceptually a new fiber, schedule a Placement effect
+    // 翻译：由于从概念上讲这是一种新Fiber对象，因此请安排"Placement"操作。
     workInProgress.effectTag |= Placement;
   }
 
@@ -1014,9 +1178,11 @@ function mountIndeterminateComponent(
     ReactCurrentOwner.current = workInProgress;
     value = Component(props, context);
   } else {
+    // 执行一次这个函数。
     value = Component(props, context);
   }
   // React DevTools reads this flag.
+  // 翻译：React开发工具会读取这个标记。
   workInProgress.effectTag |= PerformedWork;
 
   if (
@@ -1026,6 +1192,7 @@ function mountIndeterminateComponent(
     value.$$typeof === undefined
   ) {
     // Proceed under the assumption that this is a class instance
+    // 翻译：在假定这是一个类实例的情况下进行。
     workInProgress.tag = ClassComponent;
 
     // Push context providers early to prevent context stack mismatches.
@@ -1064,6 +1231,7 @@ function mountIndeterminateComponent(
     );
   } else {
     // Proceed under the assumption that this is a function component
+    // 翻译：在假定这是功能组件的情况下进行。
     workInProgress.tag = FunctionComponent;
     if (__DEV__) {
       if (Component) {
@@ -1340,6 +1508,13 @@ function updateSuspenseComponent(
   return next;
 }
 
+/**
+ * 更新Portal组件。
+ * @param current 当前处理的Fiber对象，可能为空
+ * @param workInProgress 当前处理的Fiber对象的进行中副本
+ * @param renderExpirationTime 当前处理的Fiber所在的FiberRoot的nextExpirationTimeToWorkOn
+ * @return {Fiber}
+ */
 function updatePortalComponent(
   current: Fiber | null,
   workInProgress: Fiber,
@@ -1352,6 +1527,9 @@ function updatePortalComponent(
     // but at commit. Therefore we need to track insertions which the normal
     // flow doesn't do during mount. This doesn't happen at the root because
     // the root always starts with a "current" with a null child.
+    // 翻译：Portals组件是特别的，因为我们不会在挂载期间添加子节点，而是在提交时才添加子节点。
+    //      因此，我们需要跟踪在挂载过程中正常流程不进行的插入。
+    //      在根节点上不会发生这种情况，因为根节点始终以带有空子节点的“current”开头。
     // TODO: Consider unifying this with how the root works.
     workInProgress.child = reconcileChildFibers(
       workInProgress,
@@ -1581,6 +1759,7 @@ function beginWork(
 
   // 判断节点是不是第一次渲染，第一次渲染的时候有workInProgress，没有current。
   if (current !== null) {
+    // 二次渲染。
     const oldProps = current.memoizedProps;
     const newProps = workInProgress.pendingProps;
     if (
@@ -1593,6 +1772,7 @@ function beginWork(
         // 优先级不高（未过期）
         updateExpirationTime > renderExpirationTime)
     ) {
+      // 判断不需要处理。
       // This fiber does not have any pending work. Bailout without entering
       // the begin phase. There's still some bookkeeping we that needs to be done
       // in this optimized path, mostly pushing stuff onto the stack.
@@ -1685,7 +1865,7 @@ function beginWork(
   // 翻译：在进入开始阶段之前，清除到期时间。
   workInProgress.expirationTime = NoWork;
 
-  // 下面会会根据组件的类型执行不同操作。
+  // 第一次渲染，以及二次渲染需要更新的情况，下面会会根据组件的类型执行不同操作。
   switch (workInProgress.tag) {
     case IndeterminateComponent: {
       const elementType = workInProgress.elementType;

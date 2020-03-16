@@ -805,6 +805,11 @@ function commitRoot(root: FiberRoot, finishedWork: Fiber): void {
   }
 }
 
+/**
+ * 重置当前节点的childExpirationTime。
+ * @param workInProgress 当前处理的Fiber对象的进行中副本
+ * @param renderTime 当前处理的Fiber所在的FiberRoot的nextExpirationTimeToWorkOn
+ */
 function resetChildExpirationTime(
   workInProgress: Fiber,
   renderTime: ExpirationTime,
@@ -812,15 +817,19 @@ function resetChildExpirationTime(
   if (renderTime !== Never && workInProgress.childExpirationTime === Never) {
     // The children of this component are hidden. Don't bubble their
     // expiration times.
+    // 翻译：该组件的子节点被隐藏。不要冒泡他们的到期时间。
     return;
   }
 
   let newChildExpirationTime = NoWork;
 
   // Bubble up the earliest expiration time.
+  // 翻译：将最早的到期时间冒泡。
   if (enableProfilerTimer && workInProgress.mode & ProfileMode) {
     // We're in profiling mode.
     // Let's use this same traversal to update the render durations.
+    // 翻译：我们处于分析模式。
+    //      让我们使用相同的遍历来更新渲染持续时间。
     let actualDuration = workInProgress.actualDuration;
     let treeBaseDuration = workInProgress.selfBaseDuration;
 
@@ -862,10 +871,14 @@ function resetChildExpirationTime(
     workInProgress.actualDuration = actualDuration;
     workInProgress.treeBaseDuration = treeBaseDuration;
   } else {
+    // 取出第一个子节点。
     let child = workInProgress.child;
     while (child !== null) {
+      // 当前子节点的过期时间。
       const childUpdateExpirationTime = child.expirationTime;
+      // 当前子节点的子节点中最高优先级的过期时间。
       const childChildExpirationTime = child.childExpirationTime;
+      // 下面是比较两个时间，早到优先级高的赋值给newChildExpirationTime。
       if (
         newChildExpirationTime === NoWork ||
         (childUpdateExpirationTime !== NoWork &&
@@ -880,16 +893,18 @@ function resetChildExpirationTime(
       ) {
         newChildExpirationTime = childChildExpirationTime;
       }
+      // 下一个子节点（也就是当前子节点的兄弟节点）。
       child = child.sibling;
     }
   }
 
+  // 完成上面对当前节点所有第一层子节点的遍历，找到最高优先级，也就是最小的过期时间。
   workInProgress.childExpirationTime = newChildExpirationTime;
 }
 
 /**
- * 完成单元任务
- * @param workInProgress Fiber对象
+ * 完成单元任务，也是一个向上回溯Fiber的过程。
+ * @param workInProgress 当前处理的Fiber对象的进行中副本
  * @return {Fiber|null}
  */
 function completeUnitOfWork(workInProgress: Fiber): Fiber | null {
@@ -912,6 +927,7 @@ function completeUnitOfWork(workInProgress: Fiber): Fiber | null {
     const returnFiber = workInProgress.return;
     const siblingFiber = workInProgress.sibling;
 
+    // Incomplete是发生异常的标记，如果NoEffect即说明该节点正常。
     if ((workInProgress.effectTag & Incomplete) === NoEffect) {
       // This fiber completed.
       // 翻译：这个Fiber节点已经完成。
@@ -938,24 +954,32 @@ function completeUnitOfWork(workInProgress: Fiber): Fiber | null {
         );
       }
       stopWorkTimer(workInProgress);
+      // 重置过期时间。
       resetChildExpirationTime(workInProgress, nextRenderExpirationTime);
       if (__DEV__) {
         ReactCurrentFiber.resetCurrentFiber();
       }
 
+      // 处理effect链。把当前节点以及子节点的effect附加到父级的过程。
       if (
         returnFiber !== null &&
         // Do not append effects to parents if a sibling failed to complete
+        // 翻译：如果兄弟节点未能完成，不要给父节点附加effect标记。
         (returnFiber.effectTag & Incomplete) === NoEffect
       ) {
         // Append all the effects of the subtree and this fiber onto the effect
         // list of the parent. The completion order of the children affects the
         // side-effect order.
+        // 翻译：将子树和此Fiber节点的所有effect附加到父级的effect列表上。
+        //      子节点的完成顺序会影响副作用顺序。
         if (returnFiber.firstEffect === null) {
+          // 父节点不存在头指针，即说明父节点还没有effect记录。
           returnFiber.firstEffect = workInProgress.firstEffect;
         }
         if (workInProgress.lastEffect !== null) {
+          // 当前节点有尾指针。
           if (returnFiber.lastEffect !== null) {
+            // 父节点有尾指针，即说明父节点已有effect记录，需要把当前节点的effect链连接到父节点链的末尾。
             returnFiber.lastEffect.nextEffect = workInProgress.firstEffect;
           }
           returnFiber.lastEffect = workInProgress.lastEffect;
@@ -967,13 +991,21 @@ function completeUnitOfWork(workInProgress: Fiber): Fiber | null {
         // to schedule our own side-effect on our own list because if end up
         // reusing children we'll schedule this effect onto itself since we're
         // at the end.
+        // 翻译：如果这个Fiber节点有副作用，我们将它添加到其子节点的副作用之后。
+        //      如果需要，我们可以通过在effect列表上进行多次传递来更早地执行某些副作用。
+        //      我们不想在自己的列表上安排自己的副作用，因为如果最终重用了子节点，
+        //      我们将在自己的结尾安排这effect。
         const effectTag = workInProgress.effectTag;
         // Skip both NoWork and PerformedWork tags when creating the effect list.
         // PerformedWork effect is read by React DevTools but shouldn't be committed.
+        // 翻译：创建效果列表时，请同时跳过NoWork和PerformedWork标签。
+        //      React开发工具读取了PerformedWork标签，但不应提交。
         if (effectTag > PerformedWork) {
           if (returnFiber.lastEffect !== null) {
+            // 如果父级有effect列表，则添加到最后。
             returnFiber.lastEffect.nextEffect = workInProgress;
           } else {
+            // 如果父级没有effect列表，则就是首个。
             returnFiber.firstEffect = workInProgress;
           }
           returnFiber.lastEffect = workInProgress;
@@ -986,26 +1018,33 @@ function completeUnitOfWork(workInProgress: Fiber): Fiber | null {
 
       if (siblingFiber !== null) {
         // If there is more work to do in this returnFiber, do that next.
+        // 翻译：如果在该returnFiber中还有更多工作要做，请继续执行下一步。
         return siblingFiber;
       } else if (returnFiber !== null) {
         // If there's no more work in this returnFiber. Complete the returnFiber.
+        // 翻译：如果此returnFiber中没有其他工作。完成returnFiber。
         workInProgress = returnFiber;
         continue;
       } else {
         // We've reached the root.
+        // 翻译：我们已经到了根节点。
         return null;
       }
     } else {
       if (workInProgress.mode & ProfileMode) {
         // Record the render duration for the fiber that errored.
+        // 翻译：记录出现错误的Fiber节点的渲染时间。
         stopProfilerTimerIfRunningAndRecordDelta(workInProgress, false);
       }
 
       // This fiber did not complete because something threw. Pop values off
       // the stack without entering the complete phase. If this is a boundary,
       // capture values if possible.
+      // 翻译：该Fiber节点未完成，因为有错误被抛出了。从堆栈中弹出值，而不进入完整阶段。
+      //      如果这是一个边界，请尽可能捕获值。
       const next = unwindWork(workInProgress, nextRenderExpirationTime);
       // Because this fiber did not complete, don't reset its expiration time.
+      // 翻译：因为该Fiber节点未完成，所以不要重置它的过期时间。
       if (workInProgress.effectTag & DidCapture) {
         // Restarting an error boundary
         stopFailedWorkTimer(workInProgress);
@@ -1056,9 +1095,11 @@ function completeUnitOfWork(workInProgress: Fiber): Fiber | null {
 
       if (siblingFiber !== null) {
         // If there is more work to do in this returnFiber, do that next.
+        // 翻译：如果在该returnFiber中还有更多工作要做，请继续执行下一步。
         return siblingFiber;
       } else if (returnFiber !== null) {
         // If there's no more work in this returnFiber. Complete the returnFiber.
+        // 翻译：如果此returnFiber中没有其他工作。完成returnFiber。
         workInProgress = returnFiber;
         continue;
       } else {
@@ -1075,7 +1116,7 @@ function completeUnitOfWork(workInProgress: Fiber): Fiber | null {
 
 /**
  * 执行Fiber单元工作
- * @param workInProgress Fiber对象
+ * @param workInProgress 当前处理的Fiber对象的进行中副本
  * @return {*}
  */
 function performUnitOfWork(workInProgress: Fiber): Fiber | null {
@@ -1119,6 +1160,7 @@ function performUnitOfWork(workInProgress: Fiber): Fiber | null {
     }
   } else {
     // 开始真正的渲染工作，这里的current可能为空。
+    // 执行的结果是当前节点的子节点。
     next = beginWork(current, workInProgress, nextRenderExpirationTime);
     workInProgress.memoizedProps = workInProgress.pendingProps;
   }

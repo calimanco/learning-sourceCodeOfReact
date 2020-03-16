@@ -531,7 +531,7 @@ export function createHostRootFiber(isConcurrent: boolean): Fiber {
 }
 
 /**
- * 依据React元素的type个props生成Fiber对象
+ * 依据React元素的type和props生成Fiber对象
  * @param type React元素的type
  * @param key React元素的key
  * @param pendingProps React元素的props
@@ -555,6 +555,7 @@ export function createFiberFromTypeAndProps(
   // 翻译：如果我们知道最终的类型，则先将解析类型设置好。那就是说，这不是偷懒。
   let resolvedType = type;
   if (typeof type === 'function') {
+    // 是function类型但没有构造函数，就会被视为IndeterminateComponent。
     if (shouldConstruct(type)) {
       fiberTag = ClassComponent;
     }
