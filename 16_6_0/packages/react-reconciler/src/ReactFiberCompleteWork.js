@@ -90,8 +90,12 @@ let appendAllChildren;
 let updateHostContainer;
 let updateHostComponent;
 let updateHostText;
+
+// 下面会根据环境不同，为上面的函数定义。
 if (supportsMutation) {
+  // 浏览器环境将运行这一部分。
   // Mutation mode
+  // 翻译：变异模式。
 
   appendAllChildren = function(
     parent: Instance,
@@ -101,6 +105,7 @@ if (supportsMutation) {
   ) {
     // We only have the top Fiber that was created but we need recurse down its
     // children to find all the terminal nodes.
+    // 翻译：我们只有创建的顶级Fiber节点，但是我们需要递归其子级以找到所有终端节点。
     let node = workInProgress.child;
     while (node !== null) {
       if (node.tag === HostComponent || node.tag === HostText) {
@@ -109,6 +114,8 @@ if (supportsMutation) {
         // If we have a portal child, then we don't want to traverse
         // down its children. Instead, we'll get insertions from each child in
         // the portal directly.
+        // 翻译：如果我们有一个portal类型的子节点，那么我们就不想遍历它的子节点。
+        //      相反，我们将直接从portal节点中的每个子节点那里获得插入。
       } else if (node.child !== null) {
         node.child.return = node;
         node = node.child;
@@ -185,6 +192,7 @@ if (supportsMutation) {
   };
 } else if (supportsPersistence) {
   // Persistent host tree mode
+  // 翻译：永久主机树模式。
 
   appendAllChildren = function(
     parent: Instance,
@@ -578,10 +586,12 @@ function completeWork(
       break;
     }
     case HostComponent: {
+      // context相关处理。
       popHostContext(workInProgress);
       const rootContainerInstance = getRootHostContainer();
       const type = workInProgress.type;
       if (current !== null && workInProgress.stateNode != null) {
+        // 二次渲染。
         updateHostComponent(
           current,
           workInProgress,
@@ -594,21 +604,26 @@ function completeWork(
           markRef(workInProgress);
         }
       } else {
+        // 首次渲染。
         if (!newProps) {
+          // 没有props，说明这个节点有问题，报错。
           invariant(
             workInProgress.stateNode !== null,
             'We must have new props for new mounts. This error is likely ' +
               'caused by a bug in React. Please file an issue.',
           );
           // This can happen when we abort work.
+          // 翻译：当我们中止工作时，会发生这种情况。
           break;
         }
 
+        // context相关。
         const currentHostContext = getHostContext();
         // TODO: Move createInstance to beginWork and keep it on a context
         // "stack" as the parent. Then append children as we go in beginWork
         // or completeWork depending on we want to add then top->down or
         // bottom->up. Top->down is faster in IE11.
+        // Hydrate相关。
         let wasHydrated = popHydrationState(workInProgress);
         if (wasHydrated) {
           // TODO: Move this and createInstance step into the beginPhase
@@ -622,9 +637,11 @@ function completeWork(
           ) {
             // If changes to the hydrated node needs to be applied at the
             // commit-phase we mark this as such.
+            // 翻译：如果需要在提交阶段对水化节点进行更改，则将其标记为这样。
             markUpdate(workInProgress);
           }
         } else {
+          // 创建DOM节点，这里返回的是一个DOM对象。
           let instance = createInstance(
             type,
             newProps,
