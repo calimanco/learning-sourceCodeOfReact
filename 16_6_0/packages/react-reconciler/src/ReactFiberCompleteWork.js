@@ -95,7 +95,7 @@ let updateHostText;
 if (supportsMutation) {
   // 浏览器环境将运行这一部分。
   // Mutation mode
-  // 翻译：变异模式。
+  // 翻译：混合模式。
 
   appendAllChildren = function(
     parent: Instance,
@@ -107,8 +107,11 @@ if (supportsMutation) {
     // children to find all the terminal nodes.
     // 翻译：我们只有创建的顶级Fiber节点，但是我们需要递归其子级以找到所有终端节点。
     let node = workInProgress.child;
+    // 找到第一层HostComponent并且执行append，并不会嵌套append。
     while (node !== null) {
       if (node.tag === HostComponent || node.tag === HostText) {
+        // 处理HostComponent。
+        // 在浏览器环境就是DOM的appendChild方法，将子节点append到当前的DOM里。
         appendInitialChild(parent, node.stateNode);
       } else if (node.tag === HostPortal) {
         // If we have a portal child, then we don't want to traverse
@@ -147,22 +150,28 @@ if (supportsMutation) {
   ) {
     // If we have an alternate, that means this is an update and we need to
     // schedule a side-effect to do the updates.
+    // 翻译：如果我们有一个alternate，则意味着这是一个更新，我们需要安排一个side-effect来进行更新。
     const oldProps = current.memoizedProps;
     if (oldProps === newProps) {
       // In mutation mode, this is sufficient for a bailout because
       // we won't touch this node even if children changed.
+      // 翻译：在mutation模式下，这足以进行处理，因为即使子代发生更改，我们也不会触摸此节点。
       return;
     }
 
     // If we get updated because one of our children updated, we don't
     // have newProps so we'll have to reuse them.
+    // 翻译：如果我们由于其中一个子节点已更新而得到update，则我们没有newProps，因此我们将不得不重用它们。
     // TODO: Split the update API as separate for the props vs. children.
     // Even better would be if children weren't special cased at all tho.
+    // DOM实例。
     const instance: Instance = workInProgress.stateNode;
+    // context相关。
     const currentHostContext = getHostContext();
     // TODO: Experiencing an error where oldProps is null. Suggests a host
     // component is hitting the resume path. Figure out why. Possibly
     // related to `hidden`.
+    // 调用diffProperties计算新旧props差异，获得updateQueue。
     const updatePayload = prepareUpdate(
       instance,
       type,
@@ -175,6 +184,8 @@ if (supportsMutation) {
     workInProgress.updateQueue = (updatePayload: any);
     // If the update payload indicates that there is a change or if there
     // is a new ref we mark this as an update. All the work is done in commitWork.
+    // 翻译：如果update有效负载表明存在更改，或者存在新ref，则将其标记为更新。
+    //      所有工作都在commitWork中完成。
     if (updatePayload) {
       markUpdate(workInProgress);
     }
@@ -186,13 +197,14 @@ if (supportsMutation) {
     newText: string,
   ) {
     // If the text differs, mark it as an update. All the work in done in commitWork.
+    // 翻译：如果文本不同，请将其标记为更新。 所有工作都在commitWork中完成。
     if (oldText !== newText) {
       markUpdate(workInProgress);
     }
   };
 } else if (supportsPersistence) {
   // Persistent host tree mode
-  // 翻译：永久主机树模式。
+  // 翻译：永久根节点树模式。
 
   appendAllChildren = function(
     parent: Instance,
@@ -515,6 +527,7 @@ if (supportsMutation) {
   };
 } else {
   // No host operations
+  // 翻译：无根节点树操作。
   updateHostContainer = function(workInProgress: Fiber) {
     // Noop
   };
@@ -551,6 +564,7 @@ function completeWork(
 ): Fiber | null {
   const newProps = workInProgress.pendingProps;
 
+  // 分类型处理。
   switch (workInProgress.tag) {
     case IndeterminateComponent:
       break;
@@ -567,6 +581,7 @@ function completeWork(
       break;
     }
     case HostRoot: {
+      // context相关处理。
       popHostContainer(workInProgress);
       popTopLevelLegacyContextObject(workInProgress);
       const fiberRoot = (workInProgress.stateNode: FiberRoot);
@@ -577,11 +592,14 @@ function completeWork(
       if (current === null || current.child === null) {
         // If we hydrated, pop so that we can delete any remaining children
         // that weren't hydrated.
+        // 翻译：如果我们已经hydrate，为了我们可以删除所有未hydrate的子节点，我们需要进行出栈操作。
         popHydrationState(workInProgress);
         // This resets the hacky state to fix isMounted before committing.
+        // 翻译：这是一个hacky状态以修复
         // TODO: Delete this when we delete isMounted and findDOMNode.
         workInProgress.effectTag &= ~Placement;
       }
+      // 这个方法在浏览器环境是空方法。
       updateHostContainer(workInProgress);
       break;
     }
@@ -641,7 +659,7 @@ function completeWork(
             markUpdate(workInProgress);
           }
         } else {
-          // 创建DOM节点，这里返回的是一个DOM对象。
+          // 创建DOM实例，这里返回的是一个DOM对象。
           let instance = createInstance(
             type,
             newProps,
@@ -650,12 +668,17 @@ function completeWork(
             workInProgress,
           );
 
+          // 将当前节点的子节点的DOM加入到父节点的DOM里。
           appendAllChildren(instance, workInProgress, false, false);
 
           // Certain renderers require commit-time effects for initial mount.
           // (eg DOM renderer supports auto-focus for certain elements).
           // Make sure such renderers get scheduled for later work.
+          // 翻译：某些渲染器需要提交时效果才能进行初始挂载。
+          //      (eg DOM渲染器支持某些元素的自动聚焦)
+          //      确保安排此类渲染器用于以后的工作。
           if (
+            // 处理事件。
             finalizeInitialChildren(
               instance,
               type,
@@ -664,13 +687,16 @@ function completeWork(
               currentHostContext,
             )
           ) {
+            // 只有节点有autoFocus属性时才会执行。
             markUpdate(workInProgress);
           }
+          // 将DOM挂载到Fiber的stateNode属性。
           workInProgress.stateNode = instance;
         }
 
         if (workInProgress.ref !== null) {
           // If there is a ref on a host node we need to schedule a callback
+          // 翻译：如果根节点上有引用，我们需要安排回调。
           markRef(workInProgress);
         }
       }
@@ -679,11 +705,14 @@ function completeWork(
     case HostText: {
       let newText = newProps;
       if (current && workInProgress.stateNode != null) {
+        // 二次渲染。
         const oldText = current.memoizedProps;
         // If we have an alternate, that means this is an update and we need
         // to schedule a side-effect to do the updates.
+        // 翻译：如果我们有一个alternate，则意味着这是一个更新，我们需要安排一个side-effect来进行更新。
         updateHostText(current, workInProgress, oldText, newText);
       } else {
+        // 首次渲染。
         if (typeof newText !== 'string') {
           invariant(
             workInProgress.stateNode !== null,
@@ -691,9 +720,11 @@ function completeWork(
               'caused by a bug in React. Please file an issue.',
           );
           // This can happen when we abort work.
+          // 翻译：这会在我们取消任务时发生。
         }
         const rootContainerInstance = getRootHostContainer();
         const currentHostContext = getHostContext();
+        // Hydrate相关
         let wasHydrated = popHydrationState(workInProgress);
         if (wasHydrated) {
           if (prepareToHydrateHostTextInstance(workInProgress)) {

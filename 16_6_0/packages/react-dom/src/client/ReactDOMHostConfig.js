@@ -163,6 +163,15 @@ export function resetAfterCommit(containerInfo: Container): void {
   eventsEnabled = null;
 }
 
+/**
+ * 创建DOM实例并挂载Fiber对象和props对象。
+ * @param type html标签
+ * @param props 新props对象
+ * @param rootContainerInstance 根节点容器实例
+ * @param hostContext context相关
+ * @param internalInstanceHandle 当前处理的Fiber对象的进行中副本（workInProgress）
+ * @return {Instance}
+ */
 export function createInstance(
   type: string,
   props: Props,
@@ -190,13 +199,16 @@ export function createInstance(
   } else {
     parentNamespace = ((hostContext: any): HostContextProd);
   }
+  // 生成DOM实例。
   const domElement: Instance = createElement(
     type,
     props,
     rootContainerInstance,
     parentNamespace,
   );
+  // 在DOM上挂载Fiber对象。key为"__reactInternalInstance$"+随机数
   precacheFiberNode(internalInstanceHandle, domElement);
+  // 在DOM上挂载props对象。key为"__reactEventHandlers$"+随机数
   updateFiberProps(domElement, props);
   return domElement;
 }
@@ -208,6 +220,15 @@ export function appendInitialChild(
   parentInstance.appendChild(child);
 }
 
+/**
+ * 初始化DOM节点，包括扩展属性、样式、事件。
+ * @param domElement DOM实例
+ * @param type html标签
+ * @param props 新的props对象
+ * @param rootContainerInstance 根节点容器实例
+ * @param hostContext 暂无用
+ * @return {boolean} 是否有autoFocus属性的布尔值
+ */
 export function finalizeInitialChildren(
   domElement: Instance,
   type: string,
@@ -215,10 +236,22 @@ export function finalizeInitialChildren(
   rootContainerInstance: Container,
   hostContext: HostContext,
 ): boolean {
+  // 设置初始化属性，包括扩展的属性、设置样式和事件绑定。
   setInitialProperties(domElement, type, props, rootContainerInstance);
+  // 查看button、input、select、textarea有没有autoFocus的属性，有则返回true，否则false。
   return shouldAutoFocusHostComponent(type, props);
 }
 
+/**
+ * 准备更新，会调用diff的函数。
+ * @param domElement DOM实例
+ * @param type html标签
+ * @param oldProps 旧的props对象
+ * @param newProps 新的props对象
+ * @param rootContainerInstance 根节点容器实例
+ * @param hostContext 暂无用
+ * @return {Array<*>}
+ */
 export function prepareUpdate(
   domElement: Instance,
   type: string,
@@ -280,6 +313,14 @@ export function shouldDeprioritizeSubtree(type: string, props: Props): boolean {
   return !!props.hidden;
 }
 
+/**
+ * 创建文本节点实例。
+ * @param text
+ * @param rootContainerInstance
+ * @param hostContext
+ * @param internalInstanceHandle
+ * @return {TextInstance}
+ */
 export function createTextInstance(
   text: string,
   rootContainerInstance: Container,

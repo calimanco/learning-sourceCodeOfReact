@@ -531,7 +531,13 @@ function markLegacyErrorBoundaryAsFailed(instance: mixed) {
   }
 }
 
+/**
+ * 提交更新。
+ * @param root FiberRoot对象
+ * @param finishedWork
+ */
 function commitRoot(root: FiberRoot, finishedWork: Fiber): void {
+  // 设置全局标记。
   isWorking = true;
   isCommitting = true;
   startCommitTimer();
@@ -542,12 +548,14 @@ function commitRoot(root: FiberRoot, finishedWork: Fiber): void {
       'related to the return field. This error is likely caused by a bug ' +
       'in React. Please file an issue.',
   );
+  // 取出pendingCommitExpirationTime。
   const committedExpirationTime = root.pendingCommitExpirationTime;
   invariant(
     committedExpirationTime !== NoWork,
     'Cannot commit an incomplete root. This error is likely caused by a ' +
       'bug in React. Please file an issue.',
   );
+  // 移除root上的pendingCommitExpirationTime。
   root.pendingCommitExpirationTime = NoWork;
 
   // Update the pending priority levels to account for the work that we are
@@ -555,12 +563,14 @@ function commitRoot(root: FiberRoot, finishedWork: Fiber): void {
   // they may schedule additional updates.
   const updateExpirationTimeBeforeCommit = finishedWork.expirationTime;
   const childExpirationTimeBeforeCommit = finishedWork.childExpirationTime;
+  // 获得最小的那个过期时间（即最高优先级）。
   const earliestRemainingTimeBeforeCommit =
     updateExpirationTimeBeforeCommit === NoWork ||
     (childExpirationTimeBeforeCommit !== NoWork &&
       childExpirationTimeBeforeCommit < updateExpirationTimeBeforeCommit)
       ? childExpirationTimeBeforeCommit
       : updateExpirationTimeBeforeCommit;
+  // 标记优先级。
   markCommittedPriorityLevels(root, earliestRemainingTimeBeforeCommit);
 
   let prevInteractions: Set<Interaction> = (null: any);
@@ -924,11 +934,14 @@ function completeUnitOfWork(workInProgress: Fiber): Fiber | null {
       ReactCurrentFiber.setCurrentFiber(workInProgress);
     }
 
+    // 父节点。
     const returnFiber = workInProgress.return;
+    // 兄弟节点。
     const siblingFiber = workInProgress.sibling;
 
     // Incomplete是发生异常的标记，如果NoEffect即说明该节点正常。
     if ((workInProgress.effectTag & Incomplete) === NoEffect) {
+      // 节点正常的流程。
       // This fiber completed.
       // 翻译：这个Fiber节点已经完成。
       if (enableProfilerTimer) {
@@ -944,6 +957,7 @@ function completeUnitOfWork(workInProgress: Fiber): Fiber | null {
 
         if (workInProgress.mode & ProfileMode) {
           // Update render duration assuming we didn't error.
+          // 翻译：假设我们没有错误，请更新渲染时间。
           stopProfilerTimerIfRunningAndRecordDelta(workInProgress, false);
         }
       } else {
@@ -977,7 +991,7 @@ function completeUnitOfWork(workInProgress: Fiber): Fiber | null {
           returnFiber.firstEffect = workInProgress.firstEffect;
         }
         if (workInProgress.lastEffect !== null) {
-          // 当前节点有尾指针。
+          // 当前节点有尾指针，也说明当前节点有副作用。
           if (returnFiber.lastEffect !== null) {
             // 父节点有尾指针，即说明父节点已有effect记录，需要把当前节点的effect链连接到父节点链的末尾。
             returnFiber.lastEffect.nextEffect = workInProgress.firstEffect;
@@ -1031,6 +1045,7 @@ function completeUnitOfWork(workInProgress: Fiber): Fiber | null {
         return null;
       }
     } else {
+      // 节点异常的流程。
       if (workInProgress.mode & ProfileMode) {
         // Record the render duration for the fiber that errored.
         // 翻译：记录出现错误的Fiber节点的渲染时间。
@@ -1042,11 +1057,13 @@ function completeUnitOfWork(workInProgress: Fiber): Fiber | null {
       // capture values if possible.
       // 翻译：该Fiber节点未完成，因为有错误被抛出了。从堆栈中弹出值，而不进入完整阶段。
       //      如果这是一个边界，请尽可能捕获值。
+      // 可能返回workInProgress或null。
       const next = unwindWork(workInProgress, nextRenderExpirationTime);
       // Because this fiber did not complete, don't reset its expiration time.
       // 翻译：因为该Fiber节点未完成，所以不要重置它的过期时间。
       if (workInProgress.effectTag & DidCapture) {
         // Restarting an error boundary
+        // 翻译：重新启动错误边界处理。
         stopFailedWorkTimer(workInProgress);
       } else {
         stopWorkTimer(workInProgress);
@@ -1057,6 +1074,7 @@ function completeUnitOfWork(workInProgress: Fiber): Fiber | null {
       }
 
       if (next !== null) {
+        // 即next就是workInProgress的情况。
         stopWorkTimer(workInProgress);
         if (__DEV__ && ReactFiberInstrumentation.debugTool) {
           ReactFiberInstrumentation.debugTool.onCompleteWork(workInProgress);
@@ -1079,12 +1097,17 @@ function completeUnitOfWork(workInProgress: Fiber): Fiber | null {
         // back here again.
         // Since we're restarting, remove anything that is not a host effect
         // from the effect tag.
+        // 翻译：如果完成这项工作产生了新工作，请继续执行下一步。我们会再次回到这里。
+        //      由于我们正在重新启动，因此请从effect标签中删除所有不是宿主effect的东西。
+        // 下面操作会将effectTag的状态设置成effectTag和HostEffectMask共有部分。
+        // 只会移除Incomplete和ShouldCapture，其他状态都会保留。
         next.effectTag &= HostEffectMask;
         return next;
       }
 
       if (returnFiber !== null) {
         // Mark the parent fiber as incomplete and clear its effect list.
+        // 翻译：将父级Fiber对象标记为不完整，并清除其effect列表。
         returnFiber.firstEffect = returnFiber.lastEffect = null;
         returnFiber.effectTag |= Incomplete;
       }
@@ -1322,9 +1345,11 @@ function renderRoot(
       workLoop(isYieldy);
     } catch (thrownValue) {
       if (nextUnitOfWork === null) {
+        // 这个情况是不可能被修复的，会中断所有操作。
         // This is a fatal error.
         // 翻译：这是一个致命错误。
         didFatal = true;
+        // 会将nextFlushedRoot.expirationTime置为NoWork。
         onUncaughtError(thrownValue);
       } else {
         if (__DEV__) {
@@ -1348,9 +1373,11 @@ function renderRoot(
             'with a reproducing case to help us find it.',
         );
 
+        // sourceFiber就是发生错误的节点。
         const sourceFiber: Fiber = nextUnitOfWork;
         let returnFiber = sourceFiber.return;
         if (returnFiber === null) {
+          // 没有父节点即是根节点，这里处理根节点的错误，这里也算致命错误，会中断所有操作。
           // This is the root. The root could capture its own errors. However,
           // we don't know if it errors before or after we pushed the host
           // context. This information is needed to avoid a stack mismatch.
@@ -1363,6 +1390,7 @@ function renderRoot(
           didFatal = true;
           onUncaughtError(thrownValue);
         } else {
+          // 非致命的常规错误处理。
           throwException(
             root,
             returnFiber,
@@ -1370,6 +1398,8 @@ function renderRoot(
             thrownValue,
             nextRenderExpirationTime,
           );
+          // 直接结束该节点，这里会调用到unwindWork的流程。
+          // 会返回有处理能力的节点或null。
           nextUnitOfWork = completeUnitOfWork(sourceFiber);
           continue;
         }

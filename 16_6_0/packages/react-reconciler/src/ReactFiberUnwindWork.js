@@ -141,6 +141,14 @@ function createClassErrorUpdate(
   return update;
 }
 
+/**
+ * 处理非致命错误的一般流程。
+ * @param root root节点
+ * @param returnFiber 发生错误的节点的父级
+ * @param sourceFiber 发生错误的节点
+ * @param value 捕获的错误信息
+ * @param renderExpirationTime FiberRoot的nextExpirationTimeToWorkOn
+ */
 function throwException(
   root: FiberRoot,
   returnFiber: Fiber,
@@ -149,10 +157,13 @@ function throwException(
   renderExpirationTime: ExpirationTime,
 ) {
   // The source fiber did not complete.
+  // 翻译：当前的Fiber未完成。
   sourceFiber.effectTag |= Incomplete;
   // Its effect list is no longer valid.
+  // 翻译：其Effect列表不再有效。
   sourceFiber.firstEffect = sourceFiber.lastEffect = null;
 
+  // Suspense相关代码。
   if (
     value !== null &&
     typeof value === 'object' &&
@@ -321,25 +332,33 @@ function throwException(
   // We didn't find a boundary that could handle this type of exception. Start
   // over and traverse parent path again, this time treating the exception
   // as an error.
+  // 翻译：我们没有找到可以处理此类异常的边界。重新开始并再次遍历父路径，这次将异常视为错误。
+  // 标记ReactFiberScheduler.js的nextRenderDidError为true。
   renderDidError();
+  // 包装过的错误对象。结构是{value, source, stack}
   value = createCapturedValue(value, sourceFiber);
   let workInProgress = returnFiber;
+  // 下面的循环会向上查找能够处理的这个错误的父节点（也就是有componentDidCatch方法），
+  // 一直找找不到的话，最终会在根节点处理。
   do {
     switch (workInProgress.tag) {
       case HostRoot: {
         const errorInfo = value;
         workInProgress.effectTag |= ShouldCapture;
         workInProgress.expirationTime = renderExpirationTime;
+        // 创建了一个tag为CaptureUpdate的Update对象。
         const update = createRootErrorUpdate(
           workInProgress,
           errorInfo,
           renderExpirationTime,
         );
+        // 将Update对象加入队列。
         enqueueCapturedUpdate(workInProgress, update);
         return;
       }
       case ClassComponent:
         // Capture and retry
+        // 翻译：捕获并重试。
         const errorInfo = value;
         const ctor = workInProgress.type;
         const instance = workInProgress.stateNode;
@@ -353,11 +372,14 @@ function throwException(
           workInProgress.effectTag |= ShouldCapture;
           workInProgress.expirationTime = renderExpirationTime;
           // Schedule the error boundary to re-render using updated state
+          // 翻译：安排错误边界以使用更新后的状态重新渲染。
+          // 创建了一个tag为CaptureUpdate的Update对象，这里会安排componentDidCatch生命周期的回调。
           const update = createClassErrorUpdate(
             workInProgress,
             errorInfo,
             renderExpirationTime,
           );
+          // 将Update对象加入队列。
           enqueueCapturedUpdate(workInProgress, update);
           return;
         }
@@ -369,6 +391,12 @@ function throwException(
   } while (workInProgress !== null);
 }
 
+/**
+ * 完成异常的节点的工作。
+ * @param workInProgress
+ * @param renderExpirationTime
+ * @return {Fiber|null}
+ */
 function unwindWork(
   workInProgress: Fiber,
   renderExpirationTime: ExpirationTime,
@@ -381,9 +409,12 @@ function unwindWork(
       }
       const effectTag = workInProgress.effectTag;
       if (effectTag & ShouldCapture) {
+        // 去掉ShouldCapture标记并添加DidCapture。
         workInProgress.effectTag = (effectTag & ~ShouldCapture) | DidCapture;
+        // 有ShouldCapture标记才会返回本身。
         return workInProgress;
       }
+      // 没有ShouldCapture标记会返回null。
       return null;
     }
     case HostRoot: {
@@ -395,11 +426,14 @@ function unwindWork(
         'The root failed to unmount after an error. This is likely a bug in ' +
           'React. Please file an issue.',
       );
+      // 去掉ShouldCapture标记并添加DidCapture。
       workInProgress.effectTag = (effectTag & ~ShouldCapture) | DidCapture;
+      // 只会返回本身。
       return workInProgress;
     }
     case HostComponent: {
       popHostContext(workInProgress);
+      // 只会返回null。
       return null;
     }
     case SuspenseComponent: {

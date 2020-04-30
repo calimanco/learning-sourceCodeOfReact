@@ -58,6 +58,7 @@ const CHILDREN = 'children';
 const STYLE = 'style';
 const HTML = '__html';
 
+// 结构赋值给HTML_NAMESPACE变量。
 const {html: HTML_NAMESPACE} = Namespaces;
 
 let warnedUnknownTags;
@@ -360,6 +361,8 @@ export function createElement(
 
   // We create tags in the namespace of their parent container, except HTML
   // tags get no namespace.
+  // 翻译：我们在父容器的命名空间中创建标记，除了HTML标签不给命名空间。
+  // 获取document对象。
   const ownerDocument: Document = getOwnerDocumentFromRootContainer(
     rootContainerElement,
   );
@@ -369,6 +372,7 @@ export function createElement(
     namespaceURI = getIntrinsicNamespace(type);
   }
   if (namespaceURI === HTML_NAMESPACE) {
+    // 无命名空间的情况处理。
     if (__DEV__) {
       isCustomComponentTag = isCustomComponent(type, props);
       // Should this check be gated by parent namespace? Not sure we want to
@@ -409,6 +413,7 @@ export function createElement(
       }
     }
   } else {
+    // 有命名空间的情况处理。
     domElement = ownerDocument.createElementNS(namespaceURI, type);
   }
 
@@ -575,6 +580,16 @@ export function setInitialProperties(
 }
 
 // Calculate the diff between the two objects.
+// 翻译：计算两个对象之间的差异。
+/**
+ * 进行diff的操作。
+ * @param domElement DOM实例
+ * @param tag html标签
+ * @param lastRawProps 旧的props对象
+ * @param nextRawProps 新的props对象
+ * @param rootContainerElement 根节点容器实例
+ * @return {Array<*>}
+ */
 export function diffProperties(
   domElement: Element,
   tag: string,
@@ -590,8 +605,11 @@ export function diffProperties(
 
   let lastProps: Object;
   let nextProps: Object;
+  // 如果是input、option、select、textarea标签，updatePayload会被赋值为空数组。
+  // 即使最终没有update内容，空数组也会导致markUpdate。
   switch (tag) {
     case 'input':
+      // 获取被扩展过的props。
       lastProps = ReactDOMInput.getHostProps(domElement, lastRawProps);
       nextProps = ReactDOMInput.getHostProps(domElement, nextRawProps);
       updatePayload = [];
@@ -624,20 +642,28 @@ export function diffProperties(
       break;
   }
 
+  // 各种警告处理。
   assertValidProps(tag, nextProps);
 
   let propKey;
   let styleName;
   let styleUpdates = null;
+  // 找到需要进行删除操作的key，即在updateQueue里置为null。
   for (propKey in lastProps) {
+    // 循环旧props的key。
     if (
+      // 新的props里有key。
       nextProps.hasOwnProperty(propKey) ||
+      // 老的props里没key。
       !lastProps.hasOwnProperty(propKey) ||
+      // 旧的props该key为null或undefined。
       lastProps[propKey] == null
     ) {
+      // 跳过，不需要进行删除。
       continue;
     }
     if (propKey === STYLE) {
+      // 处理样式的情况，styleUpdates是专门进行样式处理的map。
       const lastStyle = lastProps[propKey];
       for (styleName in lastStyle) {
         if (lastStyle.hasOwnProperty(styleName)) {
@@ -649,6 +675,7 @@ export function diffProperties(
       }
     } else if (propKey === DANGEROUSLY_SET_INNER_HTML || propKey === CHILDREN) {
       // Noop. This is handled by the clear text mechanism.
+      // 翻译：无操作。这由明文机制处理。
     } else if (
       propKey === SUPPRESS_CONTENT_EDITABLE_WARNING ||
       propKey === SUPPRESS_HYDRATION_WARNING
@@ -656,27 +683,36 @@ export function diffProperties(
       // Noop
     } else if (propKey === AUTOFOCUS) {
       // Noop. It doesn't work on updates anyway.
+      // 翻译：无操作。无论如何，它不适用于更新。
     } else if (registrationNameModules.hasOwnProperty(propKey)) {
       // This is a special case. If any listener updates we need to ensure
       // that the "current" fiber pointer gets updated so we need a commit
       // to update this element.
+      // 翻译：这是特例。如果有任何侦听器更新，我们需要确保“当前”Fiber指针得到更新，
+      //      因此我们需要提交以更新此元素。
       if (!updatePayload) {
         updatePayload = [];
       }
     } else {
       // For all other deleted properties we add it to the queue. We use
       // the whitelist in the commit phase instead.
+      // 翻译：对于所有其他已删除的属性，我们将其添加到队列中。我们在提交阶段使用白名单。
       (updatePayload = updatePayload || []).push(propKey, null);
     }
   }
+  // 寻找需要添加或修改的key。
   for (propKey in nextProps) {
     const nextProp = nextProps[propKey];
     const lastProp = lastProps != null ? lastProps[propKey] : undefined;
     if (
+      // 新的props里没有这个key，排除原型链上属性。
       !nextProps.hasOwnProperty(propKey) ||
+      // 新旧值全等。
       nextProp === lastProp ||
+      // 新值为null，旧值也为null。
       (nextProp == null && lastProp == null)
     ) {
+      // key不需要更新或添加，跳过。
       continue;
     }
     if (propKey === STYLE) {
@@ -688,7 +724,10 @@ export function diffProperties(
         }
       }
       if (lastProp) {
+        // 处理有旧样式的情况。
         // Unset styles on `lastProp` but not on `nextProp`.
+        // 翻译：未在`lastProp`上设置样式，但未在`nextProp`上设置样式。
+        // 遍历旧样式找到需要删除的样式。
         for (styleName in lastProp) {
           if (
             lastProp.hasOwnProperty(styleName) &&
@@ -701,6 +740,8 @@ export function diffProperties(
           }
         }
         // Update styles that changed since `lastProp`.
+        // 翻译：更新自`lastProp`之后更改的样式。
+        // 遍历新样式找到需要更新或增加的样式。
         for (styleName in nextProp) {
           if (
             nextProp.hasOwnProperty(styleName) &&
@@ -713,13 +754,16 @@ export function diffProperties(
           }
         }
       } else {
+        // 处理没有旧样式的情况。
         // Relies on `updateStylesByID` not mutating `styleUpdates`.
+        // 翻译：依靠`updateStylesByID`不对`styleUpdates`进行改变。
         if (!styleUpdates) {
           if (!updatePayload) {
             updatePayload = [];
           }
           updatePayload.push(propKey, styleUpdates);
         }
+        // 直接将新样式赋值。
         styleUpdates = nextProp;
       }
     } else if (propKey === DANGEROUSLY_SET_INNER_HTML) {
@@ -734,6 +778,7 @@ export function diffProperties(
         // inserted already.
       }
     } else if (propKey === CHILDREN) {
+      // 处理子节点。
       if (
         lastProp !== nextProp &&
         (typeof nextProp === 'string' || typeof nextProp === 'number')
@@ -746,6 +791,7 @@ export function diffProperties(
     ) {
       // Noop
     } else if (registrationNameModules.hasOwnProperty(propKey)) {
+      // 事件绑定的处理
       if (nextProp != null) {
         // We eagerly listen to this even though we haven't committed yet.
         if (__DEV__ && typeof nextProp !== 'function') {
@@ -762,6 +808,8 @@ export function diffProperties(
     } else {
       // For any other property we always add it to the queue and then we
       // filter it out using the whitelist during the commit.
+      // 翻译：对于其他任何属性，我们总是将其添加到队列中，然后在提交过程中使用白名单将其过滤掉。
+      // 对于新key，都直接添加。
       (updatePayload = updatePayload || []).push(propKey, nextProp);
     }
   }
