@@ -180,17 +180,26 @@ function safelyDetachRef(current: Fiber) {
   }
 }
 
+/**
+ * 在DOM变化之前运行的生命周期。
+ * 运行getSnapshotBeforeUpdate方法，生成快照。
+ * @param current 旧节点（当前）
+ * @param finishedWork 新节点
+ */
 function commitBeforeMutationLifeCycles(
   current: Fiber | null,
   finishedWork: Fiber,
 ): void {
   switch (finishedWork.tag) {
     case ClassComponent: {
+      // 这个标记来自ClassComponent实例化时检查到有getSnapshotBeforeUpdate生命周期的情况。
       if (finishedWork.effectTag & Snapshot) {
         if (current !== null) {
+          // 取出旧的状态。
           const prevProps = current.memoizedProps;
           const prevState = current.memoizedState;
           startPhaseTimer(finishedWork, 'getSnapshotBeforeUpdate');
+          // 把新的状态写入实例。
           const instance = finishedWork.stateNode;
           instance.props = finishedWork.memoizedProps;
           instance.state = finishedWork.memoizedState;
@@ -224,6 +233,7 @@ function commitBeforeMutationLifeCycles(
     case HostPortal:
     case IncompleteClassComponent:
       // Nothing to do for these component types
+      // 翻译：这些组件类型无关。
       return;
     default: {
       invariant(
@@ -684,15 +694,22 @@ function getHostSibling(fiber: Fiber): ?Instance {
   }
 }
 
+/**
+ * 执行插入的DOM操作。
+ * @param finishedWork 要处理的Fiber节点
+ */
 function commitPlacement(finishedWork: Fiber): void {
   if (!supportsMutation) {
+    // 浏览器环境下永远不会走这里。
     return;
   }
 
   // Recursively insert all host nodes into the parent.
+  // 翻译：以递归方式将所有宿主节点插入父节点。
   const parentFiber = getHostParentFiber(finishedWork);
 
   // Note: these two variables *must* always be updated together.
+  // 翻译：注意：这两个变量必须始终一起更新。
   let parent;
   let isContainer;
 

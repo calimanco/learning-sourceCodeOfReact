@@ -28,10 +28,14 @@ const reporter = {
 /**
  * Call a function while guarding against errors that happens within it.
  * Returns an error if it throws, otherwise null.
+ * 翻译：调用函数时要防止其中发生的错误。
+ *      如果抛出错误，则返回错误，否则返回null。
  *
  * In production, this is implemented using a try-catch. The reason we don't
  * use a try-catch directly is so that we can swap out a different
  * implementation in DEV mode.
+ * 翻译：在生产中，这是使用try-catch实现的。
+ *      我们不直接使用try-catch的原因是为了可以在DEV模式下换出另一个实现。
  *
  * @param {String} name of the guard to use for logging or debugging
  * @param {Function} func The function to invoke

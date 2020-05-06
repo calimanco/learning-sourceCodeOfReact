@@ -384,6 +384,9 @@ function resetStack() {
   nextUnitOfWork = null;
 }
 
+/**
+ * 执行Effect提交，进行DOM操作。
+ */
 function commitAllHostEffects() {
   while (nextEffect !== null) {
     if (__DEV__) {
@@ -393,10 +396,12 @@ function commitAllHostEffects() {
 
     const effectTag = nextEffect.effectTag;
 
+    // 重置文本节点。
     if (effectTag & ContentReset) {
       commitResetTextContent(nextEffect);
     }
 
+    // 处理ref。
     if (effectTag & Ref) {
       const current = nextEffect.alternate;
       if (current !== null) {
@@ -408,12 +413,16 @@ function commitAllHostEffects() {
     // updates, and deletions. To avoid needing to add a case for every
     // possible bitmap value, we remove the secondary effects from the
     // effect tag and switch on that value.
+    // 翻译：以下switch语句仅关注放置，更新和删除。为了避免需要为每个可能的值添加处理，
+    //      我们从效果标签中删除了次要EffectTag，然后打开该值。
     let primaryEffectTag = effectTag & (Placement | Update | Deletion);
+    // 执行插入、更新、删除操作。
     switch (primaryEffectTag) {
       case Placement: {
         commitPlacement(nextEffect);
         // Clear the "placement" from effect tag so that we know that this is inserted, before
         // any life-cycles like componentDidMount gets called.
+        // 翻译：从effect标签中清除“placement”，以便我们在调用如componentDidMount之类的任何生命周期之前已将其插入。
         // TODO: findDOMNode doesn't rely on this any more but isMounted
         // does and isMounted is deprecated anyway so we should be able
         // to kill this.
@@ -422,12 +431,15 @@ function commitAllHostEffects() {
       }
       case PlacementAndUpdate: {
         // Placement
+        // 翻译：插入。
         commitPlacement(nextEffect);
         // Clear the "placement" from effect tag so that we know that this is inserted, before
         // any life-cycles like componentDidMount gets called.
+        // 翻译：从effect标签中清除“placement”，以便我们在调用如componentDidMount之类的任何生命周期之前已将其插入。
         nextEffect.effectTag &= ~Placement;
 
         // Update
+        // 翻译：更新。
         const current = nextEffect.alternate;
         commitWork(current, nextEffect);
         break;
@@ -450,7 +462,11 @@ function commitAllHostEffects() {
   }
 }
 
+/**
+ * 这个函数覆盖了从ReactFiberCommitWork.js引入的同名方法。
+ */
 function commitBeforeMutationLifecycles() {
+  // 沿着Effect链遍历。
   while (nextEffect !== null) {
     if (__DEV__) {
       ReactCurrentFiber.setCurrentFiber(nextEffect);
@@ -458,13 +474,17 @@ function commitBeforeMutationLifecycles() {
 
     const effectTag = nextEffect.effectTag;
     if (effectTag & Snapshot) {
+      // 提交数的计数器。
       recordEffect();
+      // 这里是旧的状态，也就是更新前的节点。
       const current = nextEffect.alternate;
+      // 在DOM变化之前调用生命周期。
       commitBeforeMutationLifeCycles(current, nextEffect);
     }
 
     // Don't cleanup effects yet;
     // This will be done by commitAllLifeCycles()
+    // 翻译：不要清理效果；这将由commitAllLifeCycles()完成
     nextEffect = nextEffect.nextEffect;
   }
 
@@ -561,6 +581,7 @@ function commitRoot(root: FiberRoot, finishedWork: Fiber): void {
   // Update the pending priority levels to account for the work that we are
   // about to commit. This needs to happen before calling the lifecycles, since
   // they may schedule additional updates.
+  // 翻译：更新挂起的优先级，以记录我们将要提交的工作。这需要在调用生命周期之前发生，因为他们可能会安排其他更新。
   const updateExpirationTimeBeforeCommit = finishedWork.expirationTime;
   const childExpirationTimeBeforeCommit = finishedWork.childExpirationTime;
   // 获得最小的那个过期时间（即最高优先级）。
@@ -570,26 +591,33 @@ function commitRoot(root: FiberRoot, finishedWork: Fiber): void {
       childExpirationTimeBeforeCommit < updateExpirationTimeBeforeCommit)
       ? childExpirationTimeBeforeCommit
       : updateExpirationTimeBeforeCommit;
-  // 标记优先级。
+  // 标记优先级，会重置或更新很多root上关于时间的标记。
   markCommittedPriorityLevels(root, earliestRemainingTimeBeforeCommit);
 
   let prevInteractions: Set<Interaction> = (null: any);
   if (enableSchedulerTracing) {
     // Restore any pending interactions at this point,
     // So that cascading work triggered during the render phase will be accounted for.
+    // 翻译：此时，请还原所有未决的交互，以便考虑渲染阶段触发的级联工作。
     prevInteractions = __interactionsRef.current;
     __interactionsRef.current = root.memoizedInteractions;
   }
 
   // Reset this to null before calling lifecycles
+  // 翻译：在调用生命周期之前将此值重置为null。
   ReactCurrentOwner.current = null;
 
   let firstEffect;
+  // PerformedWork本身无意义，这里的判断只是说明该节点有Effect需要处理。
   if (finishedWork.effectTag > PerformedWork) {
     // A fiber's effect list consists only of its children, not itself. So if
     // the root has an effect, we need to add it to the end of the list. The
     // resulting list is the set that would belong to the root's parent, if
     // it had one; that is, all the effects in the tree including the root.
+    // 翻译：一个Fiber对象的Effect链仅由其子节点组成，而不包含其本身。
+    //      因此，如果一个root节点由Effect链，我们需要将它加入到列表末尾。
+    //      结果列表是属于root节点的父级（如果有），也就是说，树中的所有Effect（包括根）。
+    // 将当前节点上的Effect链增加到root的Effect链上。
     if (finishedWork.lastEffect !== null) {
       finishedWork.lastEffect.nextEffect = finishedWork;
       firstEffect = finishedWork.firstEffect;
@@ -598,18 +626,22 @@ function commitRoot(root: FiberRoot, finishedWork: Fiber): void {
     }
   } else {
     // There is no effect on the root.
+    // 翻译：在root上没有Effect需要处理。
     firstEffect = finishedWork.firstEffect;
   }
 
   prepareForCommit(root.containerInfo);
 
   // Invoke instances of getSnapshotBeforeUpdate before mutation.
+  // 翻译：渲染输出前调用实例上的getSnapshotBeforeUpdate生命周期方法。
   nextEffect = firstEffect;
   startCommitSnapshotEffectsTimer();
+  // 这里的循环是为了让过程不会被错误中断。
   while (nextEffect !== null) {
     let didError = false;
     let error;
     if (__DEV__) {
+      // 使用防护回调方法进行调用，收集错误。
       invokeGuardedCallback(null, commitBeforeMutationLifecycles, null);
       if (hasCaughtError()) {
         didError = true;
@@ -617,6 +649,7 @@ function commitRoot(root: FiberRoot, finishedWork: Fiber): void {
       }
     } else {
       try {
+        // 调用生命周期方法。
         commitBeforeMutationLifecycles();
       } catch (e) {
         didError = true;
@@ -647,12 +680,15 @@ function commitRoot(root: FiberRoot, finishedWork: Fiber): void {
   // Commit all the side-effects within a tree. We'll do this in two passes.
   // The first pass performs all the host insertions, updates, deletions and
   // ref unmounts.
+  // 翻译：提交所有该树上的副作用。我们将分两次处理。第一遍执行所有主机插入，更新，删除和引用卸载。
   nextEffect = firstEffect;
   startCommitHostEffectsTimer();
+  // 这里的循环是为了让过程不会被错误中断。
   while (nextEffect !== null) {
     let didError = false;
     let error;
     if (__DEV__) {
+      // 使用防护回调方法进行调用，收集错误。
       invokeGuardedCallback(null, commitAllHostEffects, null);
       if (hasCaughtError()) {
         didError = true;
@@ -660,6 +696,7 @@ function commitRoot(root: FiberRoot, finishedWork: Fiber): void {
       }
     } else {
       try {
+        // 操作DOM节点。
         commitAllHostEffects();
       } catch (e) {
         didError = true;
@@ -699,6 +736,7 @@ function commitRoot(root: FiberRoot, finishedWork: Fiber): void {
     let didError = false;
     let error;
     if (__DEV__) {
+      // 使用防护回调方法进行调用，收集错误。
       invokeGuardedCallback(
         null,
         commitAllLifeCycles,
@@ -712,6 +750,7 @@ function commitRoot(root: FiberRoot, finishedWork: Fiber): void {
       }
     } else {
       try {
+        // 调用生命周期方法。
         commitAllLifeCycles(root, committedExpirationTime);
       } catch (e) {
         didError = true;
@@ -731,6 +770,7 @@ function commitRoot(root: FiberRoot, finishedWork: Fiber): void {
     }
   }
 
+  // commit阶段完成。
   isCommitting = false;
   isWorking = false;
   stopCommitLifeCyclesTimer();
