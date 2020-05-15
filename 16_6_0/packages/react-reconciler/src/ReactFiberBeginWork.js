@@ -1889,9 +1889,9 @@ function beginWork(
     case FunctionComponent: {
       // 这里的type就是使用者写的函数。
       const Component = workInProgress.type;
-      // 新一次渲染产生的props。
+      // 新的props。
       const unresolvedProps = workInProgress.pendingProps;
-      // 处理props。
+      // 根据Component.defaultProps处理有默认值的props。
       const resolvedProps =
         workInProgress.elementType === Component
           ? unresolvedProps

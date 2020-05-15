@@ -2465,7 +2465,7 @@ function performAsyncWork(dl) {
       recomputeCurrentRendererTime();
       let root: FiberRoot = firstScheduledRoot;
       do {
-        // 在root上增加一个过期的标记字段。
+        // 在root上增加一个过期的标记字段，即root.nextExpirationTimeToWorkOn。
         didExpireAtExpirationTime(root, currentRendererTime);
         // The root schedule is circular, so this is never null.
         // 翻译：根调度是循环的，因此永远不会为空。
@@ -2638,7 +2638,7 @@ function performWorkOnRoot(
   // Check if this is async work or sync/expired work.
   // 翻译：检查这是异步工作还是同步/过期工作。
   if (deadline === null || isExpired) {
-    // 强制流程。
+    // 无中断流程。
     // Flush work without yielding.
     // 翻译：无中断执行任务。
     // TODO: Non-yieldy work does not necessarily imply expired work. A renderer
@@ -2674,7 +2674,7 @@ function performWorkOnRoot(
       }
     }
   } else {
-    // 非强制流程。
+    // 可中断流程。
     // Flush async work.
     // 翻译：执行异步任务。
     let finishedWork = root.finishedWork;
@@ -2769,6 +2769,12 @@ function completeRoot(
 
 // When working on async work, the reconciler asks the renderer if it should
 // yield execution. For DOM, we implement this with requestIdleCallback.
+// 翻译：在进行异步工作时，协调器会询问渲染器是否应该推迟执行。
+//      对于DOM，我们使用requestIdleCallback实现此功能。
+/**
+ * 判断时间片是否还有时间。
+ * @return {boolean}
+ */
 function shouldYield() {
   if (deadlineDidExpire) {
     return true;
@@ -2779,6 +2785,7 @@ function shouldYield() {
   ) {
     // Disregard deadline.didTimeout. Only expired work should be flushed
     // during a timeout. This path is only hit for non-expired work.
+    // 翻译：忽略deadline.didTimeout。在超时期间，仅清除过期的任务。仅对未到期的任务使用此路径。
     return false;
   }
   deadlineDidExpire = true;

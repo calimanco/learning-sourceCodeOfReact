@@ -366,10 +366,10 @@ function FiberNode(
 // 5) 很容易将其移植到C结构并保持C实现兼容。
 /**
  * 生成Fiber实例的方法。
- * @param tag
- * @param pendingProps
- * @param key
- * @param mode
+ * @param tag 节点类型
+ * @param pendingProps 新的props
+ * @param key 标签上key属性值
+ * @param mode 运行模式，会继承自父节点
  * @return {FiberNode}
  */
 const createFiber = function(
@@ -414,7 +414,7 @@ export function resolveLazyComponentTag(Component: Function): WorkTag {
 // This is used to create an alternate fiber to do work on.
 // 翻译：这用于创建任务执行过程中的Fiber对象副本。
 /**
- * 创建一个Fiber对象副本并返回，用于更新任务（也可以叫WorkInProgress）。
+ * 创建或复用一个Fiber对象副本并返回，用于更新任务（也可以叫WorkInProgress）。
  * @param current Fiber对象
  * @param pendingProps 待处理的props
  * @param expirationTime 过期时间（无效参数）
@@ -532,12 +532,12 @@ export function createHostRootFiber(isConcurrent: boolean): Fiber {
 
 /**
  * 依据React元素的type和props生成Fiber对象
- * @param type React元素的type
- * @param key React元素的key
- * @param pendingProps React元素的props
+ * @param type ReactElement的type
+ * @param key 标签上key属性值
+ * @param pendingProps 新的props，一般是ReactElement的props
  * @param owner dev下用到的_owner
- * @param mode 父级Fiber的mode
- * @param expirationTime 所在的FiberRoot的nextExpirationTimeToWorkOn
+ * @param mode 指定运行模式，会继承自父节点
+ * @param expirationTime 过期时间，一般是所在的FiberRoot的nextExpirationTimeToWorkOn
  * @return {Fiber|*}
  */
 export function createFiberFromTypeAndProps(
@@ -650,10 +650,10 @@ export function createFiberFromTypeAndProps(
 }
 
 /**
- * 使用React元素创建Fiber对象
+ * 使用React元素创建Fiber节点
  * @param element React元素
- * @param mode 父级Fiber的mode
- * @param expirationTime 所在的FiberRoot的nextExpirationTimeToWorkOn
+ * @param mode 运行模式，会继承自父节点
+ * @param expirationTime 过期时间，一般是所在的FiberRoot的nextExpirationTimeToWorkOn
  * @return {Fiber}
  */
 export function createFiberFromElement(
@@ -683,6 +683,14 @@ export function createFiberFromElement(
   return fiber;
 }
 
+/**
+ * 	生成ReactFragment类型的Fiber节点。
+ * @param elements ReactElement元素
+ * @param mode 运行模式，会继承自父节点
+ * @param expirationTime 过期时间，一般是所在的FiberRoot的nextExpirationTimeToWorkOn
+ * @param key 标签上key属性值
+ * @return {Fiber}
+ */
 export function createFiberFromFragment(
   elements: ReactFragment,
   mode: TypeOfMode,
@@ -758,6 +766,13 @@ export function createFiberFromSuspense(
   return fiber;
 }
 
+/**
+ * 生成文本类型的Fiber节点
+ * @param content 文本
+ * @param mode 运行模式，会继承自父节点
+ * @param expirationTime 过期时间，一般是所在的FiberRoot的nextExpirationTimeToWorkOn
+ * @return {Fiber}
+ */
 export function createFiberFromText(
   content: string,
   mode: TypeOfMode,

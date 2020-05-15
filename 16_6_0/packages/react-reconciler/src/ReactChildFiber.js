@@ -328,8 +328,8 @@ function ChildReconciler(shouldTrackSideEffects) {
   }
 
   /**
-   * 复用节点。
-   * @param fiber 要被复用的Fiber对象
+   * 复用已有节点。
+   * @param fiber 要被复用的Fiber节点
    * @param pendingProps 新的props
    * @param expirationTime fiber所在的FiberRoot的nextExpirationTimeToWorkOn
    * @return {Fiber}
@@ -391,6 +391,7 @@ function ChildReconciler(shouldTrackSideEffects) {
   function placeSingleChild(newFiber: Fiber): Fiber {
     // This is simpler for the single child case. We only need to do a
     // placement for inserting new children.
+    // 翻译：对于单子情况，这更简单。我们只需要放置一个位置即可插入新的孩子。
     if (shouldTrackSideEffects && newFiber.alternate === null) {
       newFiber.effectTag = Placement;
     }
@@ -623,7 +624,7 @@ function ChildReconciler(shouldTrackSideEffects) {
     // Update the fiber if the keys match, otherwise return null.
     // 翻译：如果key匹配，则更新Fiber对象，否则返回null。
 
-    // 显示的key。
+    // 显式的key。
     const key = oldFiber !== null ? oldFiber.key : null;
 
     if (typeof newChild === 'string' || typeof newChild === 'number') {
@@ -635,6 +636,7 @@ function ChildReconciler(shouldTrackSideEffects) {
       if (key !== null) {
         return null;
       }
+      // 只要没有key，无论什么老节点都会被复用。
       return updateTextNode(
         returnFiber,
         oldFiber,
@@ -1281,15 +1283,18 @@ function ChildReconciler(shouldTrackSideEffects) {
   ): Fiber {
     const key = element.key;
     let child = currentFirstChild;
+    // 循环所有同级兄弟节点，找到可以复用的节点，把其他的都删除。
     while (child !== null) {
       // TODO: If key === null and child.key === null, then this only applies to
       // the first item in the list.
+      // key如果不同就不会再做进一步比较了。
       if (child.key === key) {
         if (
           child.tag === Fragment
             ? element.type === REACT_FRAGMENT_TYPE
             : child.elementType === element.type
         ) {
+          // 找到可复用节点。
           deleteRemainingChildren(returnFiber, child.sibling);
           const existing = useFiber(
             child,
@@ -1304,8 +1309,10 @@ function ChildReconciler(shouldTrackSideEffects) {
             existing._debugSource = element._source;
             existing._debugOwner = element._owner;
           }
+          // 可以复用的节点会直接复用并返回。
           return existing;
         } else {
+          // key相同但类型不同，还是会墙里掉所有兄弟节点，包括当前节点。
           deleteRemainingChildren(returnFiber, child);
           break;
         }
@@ -1315,6 +1322,7 @@ function ChildReconciler(shouldTrackSideEffects) {
       child = child.sibling;
     }
 
+    // 没有可复用情况，进入新建流程。
     if (element.type === REACT_FRAGMENT_TYPE) {
       const created = createFiberFromFragment(
         element.props.children,
@@ -1337,7 +1345,7 @@ function ChildReconciler(shouldTrackSideEffects) {
   }
 
   /**
-   * 调和单一节点
+   * 调和单一Portal节点
    * @param returnFiber 父节点
    * @param currentFirstChild
    * @param portal
@@ -1432,6 +1440,7 @@ function ChildReconciler(shouldTrackSideEffects) {
 
     // Handle object types
     // 翻译：处理对象类型。
+    // 注意：这里排除了null的情况。
     const isObject = typeof newChild === 'object' && newChild !== null;
 
     if (isObject) {

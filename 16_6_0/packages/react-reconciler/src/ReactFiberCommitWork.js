@@ -629,8 +629,14 @@ function commitContainer(finishedWork: Fiber) {
   }
 }
 
+/**
+ * 查找宿主父级节点。原生父级包括原生节点和根节点。
+ * @param fiber
+ * @return {Fiber}
+ */
 function getHostParentFiber(fiber: Fiber): Fiber {
   let parent = fiber.return;
+  // 循环不断向上级查找。
   while (parent !== null) {
     if (isHostParent(parent)) {
       return parent;
@@ -644,6 +650,11 @@ function getHostParentFiber(fiber: Fiber): Fiber {
   );
 }
 
+/**
+ * 是否是宿主父级。
+ * @param fiber
+ * @return {boolean}
+ */
 function isHostParent(fiber: Fiber): boolean {
   return (
     fiber.tag === HostComponent ||
@@ -652,6 +663,11 @@ function isHostParent(fiber: Fiber): boolean {
   );
 }
 
+/**
+ * 找到可以向前插入的兄弟DOM节点。
+ * @param fiber
+ * @return {null|*}
+ */
 function getHostSibling(fiber: Fiber): ?Instance {
   // We're going to search forward into the tree until we find a sibling host
   // node. Unfortunately, if multiple insertions are done in a row we have to
@@ -706,6 +722,7 @@ function commitPlacement(finishedWork: Fiber): void {
 
   // Recursively insert all host nodes into the parent.
   // 翻译：以递归方式将所有宿主节点插入父节点。
+  // 获取到最近的宿主节点，也就是原生节点或根节点。
   const parentFiber = getHostParentFiber(finishedWork);
 
   // Note: these two variables *must* always be updated together.
@@ -735,8 +752,10 @@ function commitPlacement(finishedWork: Fiber): void {
   }
   if (parentFiber.effectTag & ContentReset) {
     // Reset the text content of the parent before doing any insertions
+    // 翻译：进行任何插入之前，重置父级的文本内容。
     resetTextContent(parent);
     // Clear ContentReset from the effect tag
+    // 翻译：从Effect标签中清除ContentReset
     parentFiber.effectTag &= ~ContentReset;
   }
 
@@ -782,21 +801,29 @@ function commitPlacement(finishedWork: Fiber): void {
   }
 }
 
+/**
+ * 卸载宿主组件。
+ * @param current 要处理的Fiber节点
+ */
 function unmountHostComponents(current): void {
   // We only have the top Fiber that was deleted but we need recurse down its
   // children to find all the terminal nodes.
+  // 翻译：我们只有被删除的顶层Fiber节点，但我们需要递归向下寻找所有的终端节点。
   let node: Fiber = current;
 
   // Each iteration, currentParent is populated with node's host parent if not
   // currentParentIsValid.
+  // 翻译：如果currentParentIsValid为false，则每次循环时，currentParent都将填充节点的宿主父级。
   let currentParentIsValid = false;
 
   // Note: these two variables *must* always be updated together.
+  // 翻译：注意：这两个变量必须始终一起更新。
   let currentParent;
   let currentParentIsContainer;
 
   while (true) {
     if (!currentParentIsValid) {
+      // 当前节点的父级。
       let parent = node.return;
       findParent: while (true) {
         invariant(
@@ -804,10 +831,13 @@ function unmountHostComponents(current): void {
           'Expected to find a host parent. This error is likely caused by ' +
             'a bug in React. Please file an issue.',
         );
+        // 遇到下面三种情况之一才会跳出循环。
         switch (parent.tag) {
           case HostComponent:
+            // 取出节点对应的DOM对象。
             currentParent = parent.stateNode;
             currentParentIsContainer = false;
+            // 注意：这里是跳出while循环，不是switch。
             break findParent;
           case HostRoot:
             currentParent = parent.stateNode.containerInfo;
@@ -818,8 +848,10 @@ function unmountHostComponents(current): void {
             currentParentIsContainer = true;
             break findParent;
         }
+        // 继续向上查找符合条件的节点。
         parent = parent.return;
       }
+      // 也就是说只有第一次循环会走这段逻辑。
       currentParentIsValid = true;
     }
 
@@ -872,13 +904,21 @@ function unmountHostComponents(current): void {
   }
 }
 
+/**
+ * 删除节点。
+ * @param current 需要处理的Fiber节点
+ */
 function commitDeletion(current: Fiber): void {
   if (supportsMutation) {
+    // 浏览器环境会走这里。
     // Recursively delete all host nodes from the parent.
     // Detach refs and call componentWillUnmount() on the whole subtree.
+    // 翻译：从父级递归删除所有宿主节点。
+    //      分离ref并在整个子树上调用componentWillUnmount()。
     unmountHostComponents(current);
   } else {
     // Detach refs and call componentWillUnmount() on the whole subtree.
+    // 翻译：分离ref并在整个子树上调用componentWillUnmount()。
     commitNestedUnmounts(current);
   }
   detachFiber(current);
@@ -958,8 +998,13 @@ function commitWork(current: Fiber | null, finishedWork: Fiber): void {
   }
 }
 
+/**
+ * 重置文本节点。
+ * @param current 要处理的节点
+ */
 function commitResetTextContent(current: Fiber) {
   if (!supportsMutation) {
+    // 浏览器环境永远不会走这里。
     return;
   }
   resetTextContent(current.stateNode);
