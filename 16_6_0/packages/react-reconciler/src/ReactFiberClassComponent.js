@@ -1026,7 +1026,7 @@ function resumeMountClassInstance(
     newState = workInProgress.memoizedState;
   }
 
-  // forceUpdate为true，或者shouldComponentUpdate为true，就标记为需要更新。
+  // forceUpdate为true，或者shouldComponentUpdate返回true，就标记为需要更新。
   const shouldUpdate =
     checkHasForceUpdateAfterProcessing() ||
     checkShouldComponentUpdate(

@@ -1014,7 +1014,7 @@ function completeUnitOfWork(workInProgress: Fiber): Fiber | null {
         ReactCurrentFiber.resetCurrentFiber();
       }
 
-      // 处理effect链。把当前节点以及子节点的effect附加到父级的过程。
+      // 处理Effect链，把当前节点的EffectTag以及Effect链（就是子节点的Effect）附加到父级。
       if (
         returnFiber !== null &&
         // Do not append effects to parents if a sibling failed to complete

@@ -918,7 +918,7 @@ function ChildReconciler(shouldTrackSideEffects) {
         expirationTime,
       );
       if (newFiber === null) {
-        // 这里就是无法复用的情况。
+        // 这里就是无法复用的情况，会跳出循环。
         // TODO: This breaks on empty slots like null children. That's
         // unfortunate because it triggers the slow path all the time. We need
         // a better way to communicate whether this was a miss or null,
@@ -1345,11 +1345,11 @@ function ChildReconciler(shouldTrackSideEffects) {
   }
 
   /**
-   * 调和单一Portal节点
+   * 处理单一Portal节点
    * @param returnFiber 父节点
-   * @param currentFirstChild
-   * @param portal
-   * @param expirationTime
+   * @param currentFirstChild returnFiber的第一个child
+   * @param portal ReactDOM.Portal元素
+   * @param expirationTime returnFiber所在的FiberRoot的nextExpirationTimeToWorkOn
    * @return {Fiber}
    */
   function reconcileSinglePortal(

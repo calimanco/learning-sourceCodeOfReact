@@ -222,7 +222,7 @@ function forceUnmountCurrentAndReconcile(
  * 更新ForwardRef节点
  * @param current 当前处理的Fiber对象，可能为空
  * @param workInProgress 当前处理的Fiber对象的进行中副本
- * @param type workInProgress的type，也是React.forwardRef的返回内容。
+ * @param type workInProgress的type，也是React.forwardRef的返回内容
  * @param nextProps 新的props对象
  * @param renderExpirationTime 当前处理的Fiber所在的FiberRoot的nextExpirationTimeToWorkOn
  * @return {Fiber}
@@ -568,6 +568,7 @@ function updateClassComponent(
   if (instance === null) {
     if (current !== null) {
       // 第一次渲染，但却有current，这种特殊情况会出现在suspend组件时。
+      // 之前一次渲染的时候它抛出promise，并没有生成实例，这里需要重置它一些状态，让它符合首次渲染的要求。
       // An class component without an instance only mounts if it suspended
       // inside a non- concurrent tree, in an inconsistent state. We want to
       // tree it like a new mount, even though an empty version of it already
@@ -1529,7 +1530,7 @@ function updatePortalComponent(
     // the root always starts with a "current" with a null child.
     // 翻译：Portals组件是特别的，因为我们不会在挂载期间添加子节点，而是在提交时才添加子节点。
     //      因此，我们需要跟踪在挂载过程中正常流程不进行的插入。
-    //      在根节点上不会发生这种情况，因为根节点始终以带有空子节点的“current”开头。
+    //      在根节点上不会发生这种情况，因为根节点始终从带有空子节点的“current”节点开始。
     // TODO: Consider unifying this with how the root works.
     workInProgress.child = reconcileChildFibers(
       workInProgress,
