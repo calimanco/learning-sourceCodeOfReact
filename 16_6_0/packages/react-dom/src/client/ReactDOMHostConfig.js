@@ -315,7 +315,7 @@ export function shouldDeprioritizeSubtree(type: string, props: Props): boolean {
 
 /**
  * 创建文本节点实例。
- * @param text
+ * @param text 文本内容
  * @param rootContainerInstance
  * @param hostContext
  * @param internalInstanceHandle

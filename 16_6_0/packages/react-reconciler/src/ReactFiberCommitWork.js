@@ -245,6 +245,13 @@ function commitBeforeMutationLifeCycles(
   }
 }
 
+/**
+ * 处理提交完成后的生命周期方法、setState的回调函数以及异常产生的回调，并清理。
+ * @param finishedRoot 根Fiber节点
+ * @param current 当前的Fiber节点（旧）
+ * @param finishedWork 要处理的Fiber节点(新)
+ * @param committedExpirationTime root上的pendingCommitExpirationTime
+ */
 function commitLifeCycles(
   finishedRoot: FiberRoot,
   current: Fiber | null,
@@ -279,6 +286,9 @@ function commitLifeCycles(
       if (updateQueue !== null) {
         instance.props = finishedWork.memoizedProps;
         instance.state = finishedWork.memoizedState;
+        // 将捕获到的更新加入到普通更新队列，清空捕获更新的队列。
+        // 沿着Effect链执行callback（如果有，一般setState时传入），清空Effect链。
+        // 沿着CapturedEffect链执行callback（如果有，一般来自componentDidCatch），清空CapturedEffect链。
         commitUpdateQueue(
           finishedWork,
           updateQueue,
@@ -318,9 +328,13 @@ function commitLifeCycles(
       // (eg DOM renderer may schedule auto-focus for inputs and form controls).
       // These effects should only be committed when components are first mounted,
       // aka when there is no current/alternate.
+      // 翻译：渲染器可以在原生组件挂载后完成已安排的工作
+      //      （例如DOM渲染器可以计划输入和表单控件的自动对焦）。
+      //      仅当首次挂载组件时（也就是没有current/alternate时），才应产生这些Effect。
       if (current === null && finishedWork.effectTag & Update) {
         const type = finishedWork.type;
         const props = finishedWork.memoizedProps;
+        // 处理autoFocus。
         commitMount(instance, type, props, finishedWork);
       }
 
@@ -727,6 +741,7 @@ function commitPlacement(finishedWork: Fiber): void {
 
   // Note: these two variables *must* always be updated together.
   // 翻译：注意：这两个变量必须始终一起更新。
+  // DOM节点。
   let parent;
   let isContainer;
 
@@ -758,10 +773,11 @@ function commitPlacement(finishedWork: Fiber): void {
     // 翻译：从Effect标签中清除ContentReset
     parentFiber.effectTag &= ~ContentReset;
   }
-
+  // 查找宿主下的插入点DOM节点。即当前的节点要插入的位置后面的节点。
   const before = getHostSibling(finishedWork);
   // We only have the top Fiber that was inserted but we need recurse down its
   // children to find all the terminal nodes.
+  // 翻译：我们只有插入的顶部Fiber节点，但是我们需要递归向下寻找所有的终端节点。
   let node: Fiber = finishedWork;
   while (true) {
     if (node.tag === HostComponent || node.tag === HostText) {
@@ -924,6 +940,11 @@ function commitDeletion(current: Fiber): void {
   detachFiber(current);
 }
 
+/**
+ * 执行更新的DOM操作。
+ * @param current 当前的节点
+ * @param finishedWork 要处理的Fiber节点
+ */
 function commitWork(current: Fiber | null, finishedWork: Fiber): void {
   if (!supportsMutation) {
     commitContainer(finishedWork);
@@ -937,17 +958,22 @@ function commitWork(current: Fiber | null, finishedWork: Fiber): void {
     case HostComponent: {
       const instance: Instance = finishedWork.stateNode;
       if (instance != null) {
+        // 说明是二次渲染。
         // Commit the work prepared earlier.
+        // 翻译：提交早先准备的工作。
         const newProps = finishedWork.memoizedProps;
         // For hydration we reuse the update path but we treat the oldProps
         // as the newProps. The updatePayload will contain the real change in
         // this case.
+        // 翻译：对于hydrate操作，我们重用了更新路径，但我们以对待新props的方式对待旧props。
+        //      在这种情况下，updatePayload将包含实际更改。
         const oldProps = current !== null ? current.memoizedProps : newProps;
         const type = finishedWork.type;
         // TODO: Type the updateQueue to be specific to host components.
         const updatePayload: null | UpdatePayload = (finishedWork.updateQueue: any);
         finishedWork.updateQueue = null;
         if (updatePayload !== null) {
+          // 更新DOM上的props和各类属性。
           commitUpdate(
             instance,
             updatePayload,

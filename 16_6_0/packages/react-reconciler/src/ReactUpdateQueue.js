@@ -718,17 +718,23 @@ export function commitUpdateQueue<State>(
   // lower priority updates left over, we need to keep the captured updates
   // in the queue so that they are rebased and not dropped once we process the
   // queue again at the lower priority.
+  // 翻译：如果完成的渲染包含捕获的更新，并且还剩下优先级较低的更新，
+  //      那么我们需要将捕获的更新保留在队列中，以便一旦我们以较低优先级再次处理队列时，
+  //      捕获的更新将被重新设置并且不会被丢弃。
   if (finishedQueue.firstCapturedUpdate !== null) {
     // Join the captured update list to the end of the normal list.
+    // 翻译：将捕获的更新列表加入到普通列表的末尾。
     if (finishedQueue.lastUpdate !== null) {
       finishedQueue.lastUpdate.next = finishedQueue.firstCapturedUpdate;
       finishedQueue.lastUpdate = finishedQueue.lastCapturedUpdate;
     }
     // Clear the list of captured updates.
+    // 翻译：清理捕获的更新列表。
     finishedQueue.firstCapturedUpdate = finishedQueue.lastCapturedUpdate = null;
   }
 
   // Commit the effects
+  // 翻译：提交Effect。
   commitUpdateEffects(finishedQueue.firstEffect, instance);
   finishedQueue.firstEffect = finishedQueue.lastEffect = null;
 

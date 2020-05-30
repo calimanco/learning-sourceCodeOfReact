@@ -493,6 +493,11 @@ function commitBeforeMutationLifecycles() {
   }
 }
 
+/**
+ * 执行DOM提交后的生命周期方法
+ * @param finishedRoot 根Fiber节点
+ * @param committedExpirationTime root上的pendingCommitExpirationTime
+ */
 function commitAllLifeCycles(
   finishedRoot: FiberRoot,
   committedExpirationTime: ExpirationTime,
@@ -509,8 +514,10 @@ function commitAllLifeCycles(
     const effectTag = nextEffect.effectTag;
 
     if (effectTag & (Update | Callback)) {
+      // 调试用计数器。
       recordEffect();
       const current = nextEffect.alternate;
+      //
       commitLifeCycles(
         finishedRoot,
         current,
@@ -554,7 +561,7 @@ function markLegacyErrorBoundaryAsFailed(instance: mixed) {
 /**
  * 提交更新。
  * @param root FiberRoot对象
- * @param finishedWork
+ * @param finishedWork Fiber节点，一般是root.current.alternate
  */
 function commitRoot(root: FiberRoot, finishedWork: Fiber): void {
   // 设置全局标记。
@@ -636,6 +643,7 @@ function commitRoot(root: FiberRoot, finishedWork: Fiber): void {
   // 翻译：渲染输出前调用实例上的getSnapshotBeforeUpdate生命周期方法。
   nextEffect = firstEffect;
   startCommitSnapshotEffectsTimer();
+  // 第一次遍历。
   // 这里的循环是为了让过程不会被错误中断。
   while (nextEffect !== null) {
     let didError = false;
@@ -683,6 +691,7 @@ function commitRoot(root: FiberRoot, finishedWork: Fiber): void {
   // 翻译：提交所有该树上的副作用。我们将分两次处理。第一遍执行所有主机插入，更新，删除和引用卸载。
   nextEffect = firstEffect;
   startCommitHostEffectsTimer();
+  // 第二次遍历。
   // 这里的循环是为了让过程不会被错误中断。
   while (nextEffect !== null) {
     let didError = false;
@@ -724,14 +733,21 @@ function commitRoot(root: FiberRoot, finishedWork: Fiber): void {
   // the first pass of the commit phase, so that the previous tree is still
   // current during componentWillUnmount, but before the second pass, so that
   // the finished work is current during componentDidMount/Update.
+  // 翻译：work-in-progress树现在已经变成current树。这必须在提交阶段的第一遍之后进行，
+  //      以使上一棵树在componentWillUnmount期间仍是current树，但在第二遍之前，
+  //      因此已完成的工作在componentDidMount / Update期间是current树。
   root.current = finishedWork;
 
   // In the second pass we'll perform all life-cycles and ref callbacks.
   // Life-cycles happen as a separate pass so that all placements, updates,
   // and deletions in the entire tree have already been invoked.
   // This pass also triggers any renderer-specific initial effects.
+  // 翻译：在第二遍中，我们将执行所有生命周期和ref回调。
+  //      生命周期作为分离的过程执行，因此整个树中的所有插入，更新和删除操作均已被调用。
+  //      此遍还触发所有特定于渲染器的初始效果。
   nextEffect = firstEffect;
   startCommitLifeCyclesTimer();
+  // 第三次遍历。
   while (nextEffect !== null) {
     let didError = false;
     let error;
@@ -791,6 +807,7 @@ function commitRoot(root: FiberRoot, finishedWork: Fiber): void {
   if (earliestRemainingTimeAfterCommit === NoWork) {
     // If there's no remaining work, we can clear the set of already failed
     // error boundaries.
+    // 翻译：如果没有剩余的工作，我们可以清除已经失败的错误边界集。
     legacyErrorBoundariesThatAlreadyFailed = null;
   }
   onCommit(root, earliestRemainingTimeAfterCommit);
@@ -2723,9 +2740,9 @@ function performWorkOnRoot(
 
 /**
  * 完成FiberRoot
- * @param root
- * @param finishedWork
- * @param expirationTime
+ * @param root FiberRoot节点
+ * @param finishedWork Fiber节点，一般是root.current.alternate
+ * @param expirationTime 过期时间
  */
 function completeRoot(
   root: FiberRoot,
@@ -2744,6 +2761,7 @@ function completeRoot(
     if (firstBatch._defer) {
       // This root is blocked from committing by a batch. Unschedule it until
       // we receive another update.
+      // 翻译：批量阻止此root的提交。取消安排它，直到我们收到另一个更新。
       root.finishedWork = finishedWork;
       root.expirationTime = NoWork;
       return;
@@ -2751,16 +2769,21 @@ function completeRoot(
   }
 
   // Commit the root.
+  // 翻译：提交根节点。
+  // 这里是重置了状态。
   root.finishedWork = null;
 
   // Check if this is a nested update (a sync update scheduled during the
   // commit phase).
+  // 翻译：检查这是否是嵌套更新（在提交阶段安排的同步更新）。
   if (root === lastCommittedRootDuringThisBatch) {
     // If the next root is the same as the previous root, this is a nested
     // update. To prevent an infinite loop, increment the nested update count.
+    // 翻译：如果下一个root与上一个root相同，则为嵌套更新。为防止无限循环，请增加嵌套更新计数。
     nestedUpdateCount++;
   } else {
     // Reset whenever we switch roots.
+    // 翻译：每当我们切换root时，请重置。
     lastCommittedRootDuringThisBatch = root;
     nestedUpdateCount = 0;
   }

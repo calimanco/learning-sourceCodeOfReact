@@ -552,8 +552,8 @@ if (supportsMutation) {
 
 /**
  * 完成节点的工作。
- * @param current 当前处理的Fiber对象
- * @param workInProgress 当前处理的Fiber对象的进行中副本
+ * @param current 当前处理的Fiber节点
+ * @param workInProgress 当前处理的Fiber节点的进行中副本
  * @param renderExpirationTime 当前处理的Fiber所在的FiberRoot的nextExpirationTimeToWorkOn
  * @return {null}
  */
@@ -678,7 +678,7 @@ function completeWork(
           //      (eg DOM渲染器支持某些元素的自动聚焦)
           //      确保安排此类渲染器用于以后的工作。
           if (
-            // 处理事件。
+            // 初始化DOM节点，包括扩展属性、样式、事件。
             finalizeInitialChildren(
               instance,
               type,

@@ -360,7 +360,9 @@ function throwException(
         // Capture and retry
         // 翻译：捕获并重试。
         const errorInfo = value;
+        // 类组件。
         const ctor = workInProgress.type;
+        // DOM实例。
         const instance = workInProgress.stateNode;
         if (
           (workInProgress.effectTag & DidCapture) === NoEffect &&
@@ -393,8 +395,8 @@ function throwException(
 
 /**
  * 完成异常的节点的工作。
- * @param workInProgress
- * @param renderExpirationTime
+ * @param workInProgress 当前处理的Fiber节点的进行中副本
+ * @param renderExpirationTime 当前处理的Fiber所在的FiberRoot的nextExpirationTimeToWorkOn
  * @return {Fiber|null}
  */
 function unwindWork(
