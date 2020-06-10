@@ -461,7 +461,7 @@ function getReactRootElementInContainer(container: any) {
 
 // 当使用hydrate方法渲染的时候，是否真的要调和原有DOM节点还有这层判断。
 // ROOT_ATTRIBUTE_NAME是一个服务端渲染的标记。
-// 总结其结果，只有非null、非document节点、有子节点，并且子节点上有服务端渲染的标记才会返回true。
+// 总结其结果，只有非null、有子节点，并且子节点上有服务端渲染的标记才会返回true。
 function shouldHydrateDueToLegacyHeuristic(container) {
   // 这个函数，如果不存在container就返回null；container是document节点就返回document节点；
   // 以上都不符合就返回第一个子节点。

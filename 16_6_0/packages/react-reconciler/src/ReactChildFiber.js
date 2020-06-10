@@ -100,6 +100,13 @@ if (__DEV__) {
 
 const isArray = Array.isArray;
 
+/**
+ * 处理ref，只会处理字符串形式。
+ * @param returnFiber 父级Fiber节点
+ * @param current 当前的Fiber节点
+ * @param element ReactElement节点
+ * @return {ref|Function|*}
+ */
 function coerceRef(
   returnFiber: Fiber,
   current: Fiber | null,
@@ -131,6 +138,7 @@ function coerceRef(
       }
     }
 
+    // 这是是ClassComponent上对应的Fiber对象。
     if (element._owner) {
       const owner: ?Fiber = (element._owner: any);
       let inst;
@@ -140,6 +148,7 @@ function coerceRef(
           ownerFiber.tag === ClassComponent,
           'Function components cannot have refs.',
         );
+        // 这里是ClassComponent的实例。
         inst = ownerFiber.stateNode;
       }
       invariant(
@@ -150,18 +159,22 @@ function coerceRef(
       );
       const stringRef = '' + mixedRef;
       // Check if previous string ref matches new string ref
+      // 翻译：检查以前的字符串引用是否与新的字符串引用匹配。
       if (
         current !== null &&
         current.ref !== null &&
         typeof current.ref === 'function' &&
         current.ref._stringRef === stringRef
       ) {
+        // 没有变化则直接返回，不需要重新初始化。
         return current.ref;
       }
+      // 为字符串生成函数方法。
       const ref = function(value) {
         let refs = inst.refs;
         if (refs === emptyRefsObject) {
           // This is a lazy pooled frozen object, so we need to initialize.
+          // 翻译：这是一个惰性池冻结对象，因此我们需要初始化。
           refs = inst.refs = {};
         }
         if (value === null) {
@@ -170,6 +183,7 @@ function coerceRef(
           refs[stringRef] = value;
         }
       };
+      // 备份字符串。
       ref._stringRef = stringRef;
       return ref;
     } else {

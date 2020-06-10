@@ -1549,6 +1549,13 @@ function updatePortalComponent(
   return workInProgress.child;
 }
 
+/**
+ * 更新Context组件。
+ * @param current 当前处理的Fiber对象，可能为空
+ * @param workInProgress 当前处理的Fiber对象的进行中副本
+ * @param renderExpirationTime 当前处理的Fiber所在的FiberRoot的nextExpirationTimeToWorkOn
+ * @return {Fiber}
+ */
 function updateContextProvider(
   current: Fiber | null,
   workInProgress: Fiber,
@@ -1583,6 +1590,7 @@ function updateContextProvider(
     const changedBits = calculateChangedBits(context, newValue, oldValue);
     if (changedBits === 0) {
       // No change. Bailout early if children are the same.
+      // 翻译：没变。如果子节点相同，请尽早进行跳过。
       if (
         oldProps.children === newProps.children &&
         !hasLegacyContextChanged()
@@ -1596,6 +1604,7 @@ function updateContextProvider(
     } else {
       // The context value changed. Search for matching consumers and schedule
       // them to update.
+      // 翻译：context的值已更改。搜索匹配的使用者，并安排他们进行更新。
       propagateContextChange(
         workInProgress,
         context,

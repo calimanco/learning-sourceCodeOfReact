@@ -519,6 +519,7 @@ export function canHydrateInstance(
     return null;
   }
   // This has now been refined to an element node.
+  // 翻译：现在已将其优化为元素节点。
   return ((instance: any): Instance);
 }
 
@@ -528,9 +529,11 @@ export function canHydrateTextInstance(
 ): null | TextInstance {
   if (text === '' || instance.nodeType !== TEXT_NODE) {
     // Empty strings are not parsed by HTML so there won't be a correct match here.
+    // 翻译：HTML不会解析空字符串，因此此处没有正确的匹配项。
     return null;
   }
   // This has now been refined to a text node.
+  // 翻译：现在已将其优化为文本节点。
   return ((instance: any): TextInstance);
 }
 
@@ -572,9 +575,11 @@ export function hydrateInstance(
   hostContext: HostContext,
   internalInstanceHandle: Object,
 ): null | Array<mixed> {
+  // 在DOM上挂载Fiber对象。key为"__reactInternalInstance$"+随机数
   precacheFiberNode(internalInstanceHandle, instance);
   // TODO: Possibly defer this until the commit phase where all the events
   // get attached.
+  // 在DOM上挂载props对象。key为"__reactEventHandlers$"+随机数
   updateFiberProps(instance, props);
   let parentNamespace: string;
   if (__DEV__) {
@@ -583,6 +588,7 @@ export function hydrateInstance(
   } else {
     parentNamespace = ((hostContext: any): HostContextProd);
   }
+  // 对已有的DOM和新props进行diff，返回updateQueue。
   return diffHydratedProperties(
     instance,
     type,

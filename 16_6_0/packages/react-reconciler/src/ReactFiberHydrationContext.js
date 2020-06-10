@@ -47,13 +47,19 @@ let nextHydratableInstance: null | HydratableInstance = null;
 let isHydrating: boolean = false;
 
 function enterHydrationState(fiber: Fiber): boolean {
+  // supportsHydration固定为true。
   if (!supportsHydration) {
     return false;
   }
 
+  // DOM节点。
   const parentInstance = fiber.stateNode.containerInfo;
+  // 找parentInstance下的第一层所有子节点里nodeType是ELEMENT_NODE和TEXT_NODE的节点。
+  // 返回找到的第一个DOM节点。
   nextHydratableInstance = getFirstHydratableChild(parentInstance);
+  // 保存当前要hydrate的Fiber。
   hydrationParentFiber = fiber;
+  // 标记开始hydrate流程。
   isHydrating = true;
   return true;
 }
@@ -152,11 +158,18 @@ function insertNonHydratedInstance(returnFiber: Fiber, fiber: Fiber) {
   }
 }
 
+/**
+ * 尝试进行hydrate操作。
+ * @param fiber 要处理的Fiber节点
+ * @param nextInstance 要处理的DOM节点
+ * @return {boolean}
+ */
 function tryHydrate(fiber, nextInstance) {
   switch (fiber.tag) {
     case HostComponent: {
       const type = fiber.type;
       const props = fiber.pendingProps;
+      // 如果nodeType不等于ELEMENT_NODE，或nodeName不一致，则返回null，否则返回nextInstance本身。
       const instance = canHydrateInstance(nextInstance, type, props);
       if (instance !== null) {
         fiber.stateNode = (instance: Instance);
@@ -166,6 +179,7 @@ function tryHydrate(fiber, nextInstance) {
     }
     case HostText: {
       const text = fiber.pendingProps;
+      // 如果text为空字符串，或nodeType不等于TEXT_NODE，则返回null，否则返回nextInstance本身。
       const textInstance = canHydrateTextInstance(nextInstance, text);
       if (textInstance !== null) {
         fiber.stateNode = (textInstance: TextInstance);
@@ -178,6 +192,10 @@ function tryHydrate(fiber, nextInstance) {
   }
 }
 
+/**
+ * 检查实例是否可以进行hydrate操作。
+ * @param fiber 要处理的Fiber对象
+ */
 function tryToClaimNextHydratableInstance(fiber: Fiber): void {
   if (!isHydrating) {
     return;
@@ -185,6 +203,7 @@ function tryToClaimNextHydratableInstance(fiber: Fiber): void {
   let nextInstance = nextHydratableInstance;
   if (!nextInstance) {
     // Nothing to hydrate. Make it an insertion.
+    // 翻译：没有需要hydrate。将其插入。
     insertNonHydratedInstance((hydrationParentFiber: any), fiber);
     isHydrating = false;
     hydrationParentFiber = fiber;
@@ -195,9 +214,12 @@ function tryToClaimNextHydratableInstance(fiber: Fiber): void {
     // If we can't hydrate this instance let's try the next one.
     // We use this as a heuristic. It's based on intuition and not data so it
     // might be flawed or unnecessary.
+    // 翻译：我们不能hydrate这个实例，让我们尝试下一个。
+    //      我们将其用作启发式方法。它基于直觉而不是数据，因此可能存在缺陷或不必要。
     nextInstance = getNextHydratableSibling(firstAttemptedInstance);
     if (!nextInstance || !tryHydrate(fiber, nextInstance)) {
       // Nothing to hydrate. Make it an insertion.
+      // 翻译：没有需要hydrate。将其插入。
       insertNonHydratedInstance((hydrationParentFiber: any), fiber);
       isHydrating = false;
       hydrationParentFiber = fiber;
@@ -207,6 +229,9 @@ function tryToClaimNextHydratableInstance(fiber: Fiber): void {
     // superfluous and we'll delete it. Since we can't eagerly delete it
     // we'll have to schedule a deletion. To do that, this node needs a dummy
     // fiber associated with it.
+    // 翻译：我们匹配了下一个，现在假设第一个是多余的，然后将其删除。
+    //      由于我们不能急切地删除它，因此我们必须安排删除Effect。
+    //      为此，该节点需要虚拟Fiber节点与之关联。
     deleteHydratableInstance(
       (hydrationParentFiber: any),
       firstAttemptedInstance,
@@ -216,6 +241,13 @@ function tryToClaimNextHydratableInstance(fiber: Fiber): void {
   nextHydratableInstance = getFirstHydratableChild((nextInstance: any));
 }
 
+/**
+ * 准备对原生节点执行hydrate操作。
+ * @param fiber 要处理的Fiber对象
+ * @param rootContainerInstance 根节点的容器实例，如DOM元素或Document
+ * @param hostContext 宿主节点（DOM节点）
+ * @return {boolean}
+ */
 function prepareToHydrateHostInstance(
   fiber: Fiber,
   rootContainerInstance: Container,
@@ -230,6 +262,7 @@ function prepareToHydrateHostInstance(
   }
 
   const instance: Instance = fiber.stateNode;
+  // 执行hydrate操作，生成updateQueue。
   const updatePayload = hydrateInstance(
     instance,
     fiber.type,
@@ -242,6 +275,7 @@ function prepareToHydrateHostInstance(
   fiber.updateQueue = (updatePayload: any);
   // If the update payload indicates that there is a change or if there
   // is a new ref we mark this as an update.
+  // 翻译：如果更新有效负载表明存在更改，或者存在新引用，则将其标记为更新。
   if (updatePayload !== null) {
     return true;
   }
@@ -308,6 +342,12 @@ function popToNextHostParent(fiber: Fiber): void {
   hydrationParentFiber = parent;
 }
 
+/**
+ * 配合completeUnitWork，向上移动nextHydratableInstance和hydrationParentFiber指针。
+ * 返回是否需要对当前的Fiber执行hydrate操作。
+ * @param fiber 要处理的Fiber对象
+ * @return {boolean}
+ */
 function popHydrationState(fiber: Fiber): boolean {
   if (!supportsHydration) {
     return false;
@@ -315,13 +355,18 @@ function popHydrationState(fiber: Fiber): boolean {
   if (fiber !== hydrationParentFiber) {
     // We're deeper than the current hydration context, inside an inserted
     // tree.
+    // 翻译：在插入的树中，我们比当前的hydrate上下文更深入。
     return false;
   }
   if (!isHydrating) {
     // If we're not currently hydrating but we're in a hydration context, then
     // we were an insertion and now need to pop up reenter hydration of our
     // siblings.
+    // 翻译：如果我们不是正在执行hydrate流程，但我们处于hydrate的上下文中，然后我们是一个插入，
+    //      现在需要弹出我们的兄弟节点重新进入hydrate状态。
+    // 向上找HostComponent或HostRoot的父级。
     popToNextHostParent(fiber);
+    // 当前节点不可以执行hydrate，但它的父节点可以。
     isHydrating = true;
     return false;
   }
@@ -332,15 +377,21 @@ function popHydrationState(fiber: Fiber): boolean {
   // We only do this deeper than head and body since they tend to have random
   // other nodes in them. We also ignore components with pure text content in
   // side of them.
+  // 翻译：如果还有剩余hydrate的节点，则需要立即将其删除。
+  //      我们只比头部和主体做得更深，因为它们倾向于在其中随机包含其他节点。
+  //      我们也将忽略其中包含纯文本内容的组件。
   // TODO: Better heuristic.
   if (
+    // 不是原生节点，那就是文本节点。
     fiber.tag !== HostComponent ||
     (type !== 'head' &&
       type !== 'body' &&
+      // 判断是不是一些特殊的标签，包括内部是纯文本的情况。
       !shouldSetTextContent(type, fiber.memoizedProps))
   ) {
     let nextInstance = nextHydratableInstance;
     while (nextInstance) {
+      // 生成一个假的Fiber对象，添加Deletion的EffectTag，并加入节点的Effect链。
       deleteHydratableInstance(fiber, nextInstance);
       nextInstance = getNextHydratableSibling(nextInstance);
     }
