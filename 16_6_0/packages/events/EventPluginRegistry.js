@@ -31,16 +31,20 @@ const namesToPlugins: NamesToPlugins = {};
 
 /**
  * Recomputes the plugin list using the injected plugins and plugin ordering.
- *
+ * 翻译：使用注入的插件和插件顺序重新计算插件列表。
  * @private
  */
 function recomputePluginOrdering(): void {
   if (!eventPluginOrder) {
     // Wait until an `eventPluginOrder` is injected.
+    // 翻译：等待直到`eventPluginOrder`被注入。
     return;
   }
+  // 遍历插件的map。
   for (const pluginName in namesToPlugins) {
+    // 取出插件。
     const pluginModule = namesToPlugins[pluginName];
+    // 插件的位置。
     const pluginIndex = eventPluginOrder.indexOf(pluginName);
     invariant(
       pluginIndex > -1,
@@ -49,6 +53,7 @@ function recomputePluginOrdering(): void {
       pluginName,
     );
     if (plugins[pluginIndex]) {
+      // 插件已存在，跳过。
       continue;
     }
     invariant(
@@ -57,7 +62,9 @@ function recomputePluginOrdering(): void {
         'method, but `%s` does not.',
       pluginName,
     );
+    // 写入插件。
     plugins[pluginIndex] = pluginModule;
+    // eventTypes是插件里描述插件在不同阶段的事件名和依赖的对象。
     const publishedEvents = pluginModule.eventTypes;
     for (const eventName in publishedEvents) {
       invariant(
@@ -76,7 +83,7 @@ function recomputePluginOrdering(): void {
 
 /**
  * Publishes an event so that it can be dispatched by the supplied plugin.
- *
+ * 翻译：发布事件，以便可以通过提供的插件分派该事件。
  * @param {object} dispatchConfig Dispatch configuration for the event.
  * @param {object} PluginModule Plugin publishing the event.
  * @return {boolean} True if the event was successfully published.
@@ -190,7 +197,8 @@ export const possibleRegistrationNames = __DEV__ ? {} : (null: any);
  * Injects an ordering of plugins (by plugin name). This allows the ordering
  * to be decoupled from injection of the actual plugins so that ordering is
  * always deterministic regardless of packaging, on-the-fly injection, etc.
- *
+ * 翻译：注入插件顺序（按插件名称）。这样可以使顺序与实际插件的注入脱钩，
+ *      因此顺序始终是确定性的，而与包装，即时注入等无关。
  * @param {array} InjectedEventPluginOrder
  * @internal
  * @see {EventPluginHub.injection.injectEventPluginOrder}
@@ -204,6 +212,7 @@ export function injectEventPluginOrder(
       'once. You are likely trying to load more than one copy of React.',
   );
   // Clone the ordering so it cannot be dynamically mutated.
+  // 翻译：克隆顺序，使其无法动态更改。
   eventPluginOrder = Array.prototype.slice.call(injectedEventPluginOrder);
   recomputePluginOrdering();
 }
@@ -213,7 +222,8 @@ export function injectEventPluginOrder(
  * in the ordering injected by `injectEventPluginOrder`.
  *
  * Plugins can be injected as part of page initialization or on-the-fly.
- *
+ * 翻译：注入由EventPluginHub使用的插件。插件名称必须采用由`injectEventPluginOrder`注入的顺序。
+ *      插件可以作为页面初始化的一部分或即时注入。
  * @param {object} injectedNamesToPlugins Map from names to plugin modules.
  * @internal
  * @see {EventPluginHub.injection.injectEventPluginsByName}

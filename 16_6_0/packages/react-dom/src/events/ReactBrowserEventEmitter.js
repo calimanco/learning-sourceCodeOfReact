@@ -104,6 +104,7 @@ function getListeningForDocument(mountAt: any) {
 
 /**
  * We listen for bubbled touch events on the document object.
+ * 翻译：我们在文档对象上监听冒泡的触摸事件。
  *
  * Firefox v8.01 (and possibly others) exhibited strange behavior when
  * mounting `onmousemove` events at some node that was not the document
@@ -119,6 +120,7 @@ function getListeningForDocument(mountAt: any) {
  *
  * Also, `keyup`/`keypress`/`keydown` do not bubble to the window on IE, but
  * they bubble to document.
+ * 翻译：同样，“keyup”/“keypress”/“keydown”不会冒泡到IE上的窗口，但会冒泡以记录。
  *
  * @param {string} registrationName Name of listener (e.g. `onClick`).
  * @param {object} mountAt Container where to mount the listener
@@ -127,12 +129,15 @@ export function listenTo(
   registrationName: string,
   mountAt: Document | Element,
 ) {
+  // 获取当前节点上被监听的事件对象（key为事件名，value为true）。
   const isListening = getListeningForDocument(mountAt);
   const dependencies = registrationNameDependencies[registrationName];
 
   for (let i = 0; i < dependencies.length; i++) {
+    // 取出依赖事件。
     const dependency = dependencies[i];
     if (!(isListening.hasOwnProperty(dependency) && isListening[dependency])) {
+      // 事件还未被监听。
       switch (dependency) {
         case TOP_SCROLL:
           trapCapturedEvent(TOP_SCROLL, mountAt);
@@ -143,6 +148,8 @@ export function listenTo(
           trapCapturedEvent(TOP_BLUR, mountAt);
           // We set the flag for a single dependency later in this function,
           // but this ensures we mark both as attached rather than just one.
+          // 翻译：我们稍后会在此函数中为单个依赖项设置标志，
+          //      但这可确保我们将两者都标记为已附加，而不只是一个。
           isListening[TOP_BLUR] = true;
           isListening[TOP_FOCUS] = true;
           break;
@@ -157,16 +164,21 @@ export function listenTo(
         case TOP_RESET:
           // We listen to them on the target DOM elements.
           // Some of them bubble so we don't want them to fire twice.
+          // 翻译：我们在目标DOM元素上监听它们。
+          //      其中一些会冒泡，所以我们不希望它们触发两次。
           break;
         default:
           // By default, listen on the top level to all non-media events.
           // Media events don't bubble so adding the listener wouldn't do anything.
+          // 翻译：默认情况下，在顶层侦听所有非媒体事件。
+          //      媒体事件不会冒泡，因此添加侦听器不会做任何事情。
           const isMediaEvent = mediaEventTypes.indexOf(dependency) !== -1;
           if (!isMediaEvent) {
             trapBubbledEvent(dependency, mountAt);
           }
           break;
       }
+      // 进行记录。
       isListening[dependency] = true;
     }
   }

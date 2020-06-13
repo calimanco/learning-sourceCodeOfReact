@@ -111,15 +111,18 @@ function shouldPreventMouseEvent(name, type, props) {
 
 /**
  * Methods for injecting dependencies.
+ * 翻译：注入依赖项的方法。
  */
 export const injection = {
   /**
+   * 设置插件的顺序。
    * @param {array} InjectedEventPluginOrder
    * @public
    */
   injectEventPluginOrder,
 
   /**
+   * 设置插件的顺序。
    * @param {object} injectedNamesToPlugins Map from names to plugin modules.
    */
   injectEventPluginsByName,

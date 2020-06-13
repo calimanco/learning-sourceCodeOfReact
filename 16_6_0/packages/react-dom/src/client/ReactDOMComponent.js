@@ -475,6 +475,7 @@ export function setInitialProperties(
 
   // TODO: Make sure that we check isMounted before firing any of these events.
   let props: Object;
+  // 先将有特殊事件的标签进行处理。
   switch (tag) {
     case 'iframe':
     case 'object':
@@ -541,8 +542,10 @@ export function setInitialProperties(
       props = rawProps;
   }
 
+  //  打印警告信息。
   assertValidProps(tag, props);
 
+  // 对一般标签进行处理。
   setInitialDOMProperties(
     tag,
     domElement,
