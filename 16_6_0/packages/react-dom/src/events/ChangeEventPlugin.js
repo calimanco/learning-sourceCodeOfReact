@@ -50,6 +50,7 @@ const eventTypes = {
 };
 
 function createAndAccumulateChangeEvent(inst, nativeEvent, target) {
+  // 创建event对象，这些对象也是通过对象池进行优化的。
   const event = SyntheticEvent.getPooled(
     eventTypes.change,
     inst,
@@ -58,6 +59,7 @@ function createAndAccumulateChangeEvent(inst, nativeEvent, target) {
   );
   event.type = 'change';
   // Flag this event loop as needing state restore.
+  // 翻译：将此事件循环标记为需要状态还原。
   enqueueStateRestore(target);
   accumulateTwoPhaseDispatches(event);
   return event;
@@ -266,12 +268,15 @@ const ChangeEventPlugin = {
     nativeEvent,
     nativeEventTarget,
   ) {
+    // Fiber对应的DOM节点。
     const targetNode = targetInst ? getNodeFromInstance(targetInst) : window;
 
     let getTargetInstFunc, handleEventFunc;
     if (shouldUseChangeEvent(targetNode)) {
+      // 如果节点是select或input并且类型为file，则监听"change"事件。
       getTargetInstFunc = getTargetInstForChangeEvent;
     } else if (isTextInputElement(targetNode)) {
+      // 如果节点是input或textarea，则监听"change"或"input"事件。
       if (isInputEventSupported) {
         getTargetInstFunc = getTargetInstForInputOrChangeEvent;
       } else {
@@ -279,12 +284,15 @@ const ChangeEventPlugin = {
         handleEventFunc = handleEventsForInputEventPolyfill;
       }
     } else if (shouldUseClickEvent(targetNode)) {
+      // 如果节点是checkbox或radio，则监听"click"事件。
       getTargetInstFunc = getTargetInstForClickEvent;
     }
 
     if (getTargetInstFunc) {
       const inst = getTargetInstFunc(topLevelType, targetInst);
       if (inst) {
+        // 获取得到
+        // 只为plugin对应的事件生成event对象。
         const event = createAndAccumulateChangeEvent(
           inst,
           nativeEvent,

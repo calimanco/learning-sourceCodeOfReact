@@ -59,6 +59,7 @@ if (__DEV__) {
 
 /**
  * Dispatch the event to the listener.
+ * 翻译：将事件派发给监听器。
  * @param {SyntheticEvent} event SyntheticEvent to handle
  * @param {boolean} simulated If the event is simulated (changes exn behavior)
  * @param {function} listener Application-level callback
@@ -73,6 +74,9 @@ function executeDispatch(event, simulated, listener, inst) {
 
 /**
  * Standard/simple iteration through an event's collected dispatches.
+ * 翻译：通过事件的收集调度进行标准/简单迭代。
+ * @param event 事件对象
+ * @param simulated 布尔值，模拟器标识
  */
 export function executeDispatchesInOrder(event, simulated) {
   const dispatchListeners = event._dispatchListeners;
@@ -81,11 +85,14 @@ export function executeDispatchesInOrder(event, simulated) {
     validateEventDispatches(event);
   }
   if (Array.isArray(dispatchListeners)) {
+    // 多个监听处理器的情况。
     for (let i = 0; i < dispatchListeners.length; i++) {
       if (event.isPropagationStopped()) {
         break;
       }
       // Listeners and Instances are two parallel arrays that are always in sync.
+      // 翻译：侦听器和实例是两个始终保持同步的并行阵列。
+      // 调用监听处理器。
       executeDispatch(
         event,
         simulated,
@@ -94,6 +101,7 @@ export function executeDispatchesInOrder(event, simulated) {
       );
     }
   } else if (dispatchListeners) {
+    // 单个监听处理器。
     executeDispatch(event, simulated, dispatchListeners, dispatchInstances);
   }
   event._dispatchListeners = null;

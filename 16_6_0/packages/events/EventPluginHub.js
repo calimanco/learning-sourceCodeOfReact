@@ -35,6 +35,7 @@ let eventQueue: ?(Array<ReactSyntheticEvent> | ReactSyntheticEvent) = null;
 
 /**
  * Dispatches an event and releases it back into the pool, unless persistent.
+ * 翻译：调度事件并将其释放回池中，除非是持久的。
  *
  * @param {?object} event Synthetic event to be dispatched.
  * @param {boolean} simulated If the event is simulated (changes exn behavior)
@@ -164,7 +165,7 @@ export function getListener(inst: Fiber, registrationName: string) {
 /**
  * Allows registered plugins an opportunity to extract events from top-level
  * native browser events.
- *
+ * 翻译：使注册的插件有机会从顶级本机浏览器事件中提取事件。
  * @return {*} An accumulation of synthetic events.
  * @internal
  */
@@ -177,6 +178,7 @@ function extractEvents(
   let events = null;
   for (let i = 0; i < plugins.length; i++) {
     // Not every plugin in the ordering may be loaded at runtime.
+    // 翻译：并非队列中的每个插件都可以在运行时加载。
     const possiblePlugin: PluginModule<AnyNativeEvent> = plugins[i];
     if (possiblePlugin) {
       const extractedEvents = possiblePlugin.extractEvents(
@@ -193,20 +195,29 @@ function extractEvents(
   return events;
 }
 
+/**
+ * 批量运行事件。
+ * @param events 事件数组或单个事件或null
+ * @param simulated 布尔值，模拟器标识
+ */
 export function runEventsInBatch(
   events: Array<ReactSyntheticEvent> | ReactSyntheticEvent | null,
   simulated: boolean,
 ) {
   if (events !== null) {
+    // 工具方法，将两个数据合并成一个数组。旧数据在前，新数据在后。
+    // 其实根据下面代码eventQueue一直为null，所以这里就是直接返回events。
     eventQueue = accumulateInto(eventQueue, events);
   }
 
   // Set `eventQueue` to null before processing it so that we can tell if more
   // events get enqueued while processing.
+  // 翻译：在处理之前将`eventQueue`设置为null，这样我们就可以知道在处理过程中是否有更多事件排队。
   const processingEventQueue = eventQueue;
   eventQueue = null;
 
   if (!processingEventQueue) {
+    // 这是events为null的情况。
     return;
   }
 
@@ -216,6 +227,8 @@ export function runEventsInBatch(
       executeDispatchesAndReleaseSimulated,
     );
   } else {
+    // 如果processingEventQueue是数组里的每一项调用executeDispatchesAndReleaseTopLevel。
+    // 如果不是，则直接调用executeDispatchesAndReleaseTopLevel。
     forEachAccumulated(
       processingEventQueue,
       executeDispatchesAndReleaseTopLevel,
@@ -227,15 +240,24 @@ export function runEventsInBatch(
       'an event queue. Support for this has not yet been implemented.',
   );
   // This would be a good time to rethrow if any of the event handlers threw.
+  // 翻译：如果有任何事件处理程序抛出，这将是一个重新抛出的好时机。
   rethrowCaughtError();
 }
 
+/**
+ * 将事件交给plugin处理，产生event数组。
+ * @param topLevelType 顶级事件类型
+ * @param targetInst ancestors里的Fiber节点（也就是要执行事件处理的节点）
+ * @param nativeEvent 触发事件的DOM节点
+ * @param nativeEventTarget 触发事件的Fiber节点
+ */
 export function runExtractedEventsInBatch(
   topLevelType: TopLevelType,
   targetInst: null | Fiber,
   nativeEvent: AnyNativeEvent,
   nativeEventTarget: EventTarget,
 ) {
+  // 经过一系列plugin的处理，得到一个事件数组。
   const events = extractEvents(
     topLevelType,
     targetInst,

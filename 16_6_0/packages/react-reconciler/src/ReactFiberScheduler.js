@@ -1533,6 +1533,7 @@ function renderRoot(
 
   if (nextRenderDidError) {
     // There was an error
+    // 翻译：有一个错误。
     if (hasLowerPriorityWork(root, expirationTime)) {
       // There's lower priority work. If so, it may have the effect of fixing
       // the exception that was just thrown. Exit without committing. This is

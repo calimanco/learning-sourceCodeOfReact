@@ -88,7 +88,7 @@ function releaseTopLevelCallbackBookKeeping(instance) {
 }
 
 /**
- * 处理事件
+ * 处理React嵌套情况下的事件传递。
  * @param bookKeeping 保存事件信息的对象
  */
 function handleTopLevel(bookKeeping) {
@@ -119,6 +119,8 @@ function handleTopLevel(bookKeeping) {
     ancestor = getClosestInstanceFromNode(root);
   } while (ancestor);
 
+  // 遍历收集到的ancestors，包括触发节点的Fiber以及嵌套当前React实例的所有父级Fiber。
+  // 一般情况下React都是单例模式，所以数组只有一个项。
   for (let i = 0; i < bookKeeping.ancestors.length; i++) {
     targetInst = bookKeeping.ancestors[i];
     runExtractedEventsInBatch(

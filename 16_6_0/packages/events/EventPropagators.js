@@ -67,6 +67,8 @@ function accumulateDirectionalDispatches(inst, phase, event) {
  */
 function accumulateTwoPhaseDispatchesSingle(event) {
   if (event && event.dispatchConfig.phasedRegistrationNames) {
+    // 模拟冒泡、捕获两个节点的事件传递。
+    // 将所有经过的DOM节点按顺序执行accumulateDirectionalDispatches。
     traverseTwoPhase(event._targetInst, accumulateDirectionalDispatches, event);
   }
 }

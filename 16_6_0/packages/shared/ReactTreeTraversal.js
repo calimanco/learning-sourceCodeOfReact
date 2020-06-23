@@ -82,6 +82,7 @@ export function getParentInstance(inst) {
 
 /**
  * Simulates the traversal of a two-phase, capture/bubble event dispatch.
+ * 翻译：模拟两阶段捕获/冒泡事件分发的遍历。
  */
 export function traverseTwoPhase(inst, fn, arg) {
   const path = [];
