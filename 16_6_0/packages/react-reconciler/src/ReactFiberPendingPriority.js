@@ -16,6 +16,11 @@ import {NoWork} from './ReactFiberExpirationTime';
 // suspended inside an offscreen subtree should be able to ping at the priority
 // of the outer render.
 
+/**
+ * 标记待处理优先级。
+ * @param root FiberRoot对象
+ * @param expirationTime 过期时间
+ */
 export function markPendingPriorityLevel(
   root: FiberRoot,
   expirationTime: ExpirationTime,
@@ -23,21 +28,27 @@ export function markPendingPriorityLevel(
   // If there's a gap between completing a failed root and retrying it,
   // additional updates may be scheduled. Clear `didError`, in case the update
   // is sufficient to fix the error.
+  // 翻译：如果完成失败的根目录与重试根目录之间存在间隔，则可以安排其他更新。
+  //      如果更新足以解决错误，请清除`didError`。
   root.didError = false;
 
   // Update the latest and earliest pending times
+  // 翻译：更新最新和最早的待处理时间。
   const earliestPendingTime = root.earliestPendingTime;
   if (earliestPendingTime === NoWork) {
     // No other pending updates.
+    // 翻译：没有其他待处理的更新。
     root.earliestPendingTime = root.latestPendingTime = expirationTime;
   } else {
     if (earliestPendingTime > expirationTime) {
       // This is the earliest pending update.
+      // 翻译：这是最早的待处理更新。
       root.earliestPendingTime = expirationTime;
     } else {
       const latestPendingTime = root.latestPendingTime;
       if (latestPendingTime < expirationTime) {
         // This is the latest pending update
+        // 翻译：这是最新的待处理更新。
         root.latestPendingTime = expirationTime;
       }
     }
@@ -148,6 +159,11 @@ export function isPriorityLevelSuspended(
   );
 }
 
+/**
+ * 标记挂起优先级。
+ * @param root FiberRoot对象
+ * @param suspendedTime 挂起的时间
+ */
 export function markSuspendedPriorityLevel(
   root: FiberRoot,
   suspendedTime: ExpirationTime,
@@ -156,35 +172,44 @@ export function markSuspendedPriorityLevel(
   clearPing(root, suspendedTime);
 
   // First, check the known pending levels and update them if needed.
+  // 翻译：首先，检查已知的待处理级别并根据需要进行更新。
   const earliestPendingTime = root.earliestPendingTime;
   const latestPendingTime = root.latestPendingTime;
   if (earliestPendingTime === suspendedTime) {
+    // 待处理的优先级被挂起就要执行清理。
     if (latestPendingTime === suspendedTime) {
       // Both known pending levels were suspended. Clear them.
+      // 翻译：两个已知的待处理优先级都被挂起。清理他们。
       root.earliestPendingTime = root.latestPendingTime = NoWork;
     } else {
       // The earliest pending level was suspended. Clear by setting it to the
       // latest pending level.
+      // 翻译：最早的待处理级别已挂起。通过将其设置为latestPendingTime来清除。
       root.earliestPendingTime = latestPendingTime;
     }
   } else if (latestPendingTime === suspendedTime) {
     // The latest pending level was suspended. Clear by setting it to the
     // latest pending level.
+    // 翻译：最新的待处理级别已挂起。通过将其设置为earliestPendingTime来清除。
     root.latestPendingTime = earliestPendingTime;
   }
 
   // Finally, update the known suspended levels.
+  // 翻译：最后，更新已知的挂起级别。
   const earliestSuspendedTime = root.earliestSuspendedTime;
   const latestSuspendedTime = root.latestSuspendedTime;
   if (earliestSuspendedTime === NoWork) {
     // No other suspended levels.
+    // 翻译：没有其他挂起级别。
     root.earliestSuspendedTime = root.latestSuspendedTime = suspendedTime;
   } else {
     if (earliestSuspendedTime > suspendedTime) {
       // This is the earliest suspended level.
+      // 翻译：这是最早的挂起级别。
       root.earliestSuspendedTime = suspendedTime;
     } else if (latestSuspendedTime < suspendedTime) {
       // This is the latest suspended level
+      // 翻译：这是最新的挂起级别。
       root.latestSuspendedTime = suspendedTime;
     }
   }
@@ -192,6 +217,11 @@ export function markSuspendedPriorityLevel(
   findNextExpirationTimeToWorkOn(suspendedTime, root);
 }
 
+/**
+ * 标记重试优先级。
+ * @param root FiberRoot对象
+ * @param pingedTime 重试的时间
+ */
 export function markPingedPriorityLevel(
   root: FiberRoot,
   pingedTime: ExpirationTime,
@@ -259,6 +289,11 @@ export function didExpireAtExpirationTime(
   }
 }
 
+/**
+ * 设置树的nextExpirationTimeToWorkOn和expirationTime。
+ * @param completedExpirationTime 完成的过期时间，最后改变的时间
+ * @param root FiberRoot对象
+ */
 function findNextExpirationTimeToWorkOn(completedExpirationTime, root) {
   const earliestSuspendedTime = root.earliestSuspendedTime;
   const latestSuspendedTime = root.latestSuspendedTime;
@@ -267,11 +302,14 @@ function findNextExpirationTimeToWorkOn(completedExpirationTime, root) {
 
   // Work on the earliest pending time. Failing that, work on the latest
   // pinged time.
+  // 翻译：在最早的pendingTime上工作。如果失败，请在最新的pingedTime上工作。
+  // 一般正常流程是前者，后者是特殊的重试流程。
   let nextExpirationTimeToWorkOn =
     earliestPendingTime !== NoWork ? earliestPendingTime : latestPingedTime;
 
   // If there is no pending or pinged work, check if there's suspended work
   // that's lower priority than what we just completed.
+  // 翻译：如果没有待处理或重试的任务，请检查是否有比我们刚刚完成的任务优先级低的挂起任务。
   if (
     nextExpirationTimeToWorkOn === NoWork &&
     (completedExpirationTime === NoWork ||
@@ -280,6 +318,7 @@ function findNextExpirationTimeToWorkOn(completedExpirationTime, root) {
     // The lowest priority suspended work is the work most likely to be
     // committed next. Let's start rendering it again, so that if it times out,
     // it's ready to commit.
+    // 最低优先级的挂起任务是最有可能在接下来提交的。让我们再次开始渲染它，以便如果超时，就可以提交了。
     nextExpirationTimeToWorkOn = latestSuspendedTime;
   }
 
@@ -289,7 +328,9 @@ function findNextExpirationTimeToWorkOn(completedExpirationTime, root) {
     earliestSuspendedTime !== NoWork &&
     earliestSuspendedTime < expirationTime
   ) {
+    // 挂起任务比当前将要执行的任务优先级更高，则先执行挂起的任务。
     // Expire using the earliest known expiration time.
+    // 翻译：使用已知的最早到期时间来到期。
     expirationTime = earliestSuspendedTime;
   }
 

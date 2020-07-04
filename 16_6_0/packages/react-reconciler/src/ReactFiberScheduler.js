@@ -1478,6 +1478,7 @@ function renderRoot(
 
   // Yield back to main thread.
   // 翻译：退回到主线程。
+  // 这个值会在上面catch的时候出现致命性错误时设置为true。
   if (didFatal) {
     const didCompleteRoot = false;
     stopWorkLoopTimer(interruptedBy, didCompleteRoot);
@@ -1499,6 +1500,7 @@ function renderRoot(
 
   if (nextUnitOfWork !== null) {
     // 正常走完流程的情况下nextUnitOfWork应该是null，这是被中断的情况。
+    // 下次更新还会从nextUnitOfWork开始更新。
     // There's still remaining async work in this tree, but we ran out of time
     // in the current frame. Yield back to the renderer. Unless we're
     // interrupted by a higher priority update, we'll continue later from where
@@ -1531,6 +1533,7 @@ function renderRoot(
   nextRoot = null;
   interruptedBy = null;
 
+  // 这个值会在throwException时设置为true，是非致命性错误。
   if (nextRenderDidError) {
     // There was an error
     // 翻译：有一个错误。
@@ -1540,15 +1543,18 @@ function renderRoot(
       // similar to a suspend, but without a timeout because we're not waiting
       // for a promise to resolve. React will restart at the lower
       // priority level.
+      // 翻译：有优先级较低的工作。如果是这样，则可能具有修复刚刚抛出的异常的作用。退出而不提交。
+      //      这类似于暂停，但没有超时，因为我们不等待promise解决。React将以较低的优先级级别重启。
       markSuspendedPriorityLevel(root, expirationTime);
       const suspendedExpirationTime = expirationTime;
       const rootExpirationTime = root.expirationTime;
+      // 设置了root的expirationTime而已。
       onSuspend(
         root,
         rootWorkInProgress,
         suspendedExpirationTime,
         rootExpirationTime,
-        -1, // Indicates no timeout
+        -1, // Indicates no timeout 翻译：表示没有超时
       );
       return;
     } else if (
@@ -1556,18 +1562,24 @@ function renderRoot(
       // Synchronsouly attempt to render the same level one more time. This is
       // similar to a suspend, but without a timeout because we're not waiting
       // for a promise to resolve.
+      // 翻译：没有低优先级的工作，但是我们正在异步渲染。同步尝试一次渲染同一级节点。
+      //      这类似于暂停，但没有超时，因为我们不等待promise解决。
       !root.didError &&
       !isExpired
     ) {
+      // 标记这棵树已经报错过。
       root.didError = true;
+      // 任务优先级不变。
       const suspendedExpirationTime = (root.nextExpirationTimeToWorkOn = expirationTime);
+      // 树的优先级提高，下次立即执行。
       const rootExpirationTime = (root.expirationTime = Sync);
+      // 设置了root的expirationTime而已。
       onSuspend(
         root,
         rootWorkInProgress,
         suspendedExpirationTime,
         rootExpirationTime,
-        -1, // Indicates no timeout
+        -1, // Indicates no timeout 翻译：表示没有超时
       );
       return;
     }
@@ -1575,13 +1587,14 @@ function renderRoot(
 
   if (!isExpired && nextLatestAbsoluteTimeoutMs !== -1) {
     // The tree was suspended.
-    // 翻译：这个Fiber树被悬挂了。
+    // 翻译：这个Fiber树被挂起。
     const suspendedExpirationTime = expirationTime;
     markSuspendedPriorityLevel(root, suspendedExpirationTime);
 
     // Find the earliest uncommitted expiration time in the tree, including
     // work that is suspended. The timeout threshold cannot be longer than
     // the overall expiration.
+    // 翻译：在树中找到最早的未提交到期时间，包括已暂停的工作。超时阈值不能超过整个到期时间。
     const earliestExpirationTime = findEarliestOutstandingPriorityLevel(
       root,
       expirationTime,
@@ -2182,11 +2195,15 @@ function onSuspend(
 ): void {
   root.expirationTime = rootExpirationTime;
   if (msUntilTimeout === 0 && !shouldYield()) {
+    // 如果已经没有时间片，则还是会提交。
     // Don't wait an additional tick. Commit the tree immediately.
+    // 翻译：不需要再等待。立即提交树。
     root.pendingCommitExpirationTime = suspendedExpirationTime;
     root.finishedWork = finishedWork;
   } else if (msUntilTimeout > 0) {
     // Wait `msUntilTimeout` milliseconds before committing.
+    // 翻译：在提交之前等待`msUntilTimeout`毫秒。
+    // 在浏览器环境下，scheduleTimeout就是window.setTimeout。
     root.timeoutHandle = scheduleTimeout(
       onTimeout.bind(null, root, finishedWork, suspendedExpirationTime),
       msUntilTimeout,
@@ -2207,6 +2224,7 @@ function onTimeout(root, finishedWork, suspendedExpirationTime) {
   // because we're at the top of a timer event.
   recomputeCurrentRendererTime();
   currentSchedulerTime = currentRendererTime;
+  // 这里是直接用Sync的方式执行render。
   flushRoot(root, suspendedExpirationTime);
 }
 

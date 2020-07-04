@@ -1299,6 +1299,13 @@ function mountIndeterminateComponent(
   }
 }
 
+/**
+ * 更新Suspense组件。
+ * @param current 当前处理的Fiber对象，可能为空
+ * @param workInProgress 当前处理的Fiber对象的进行中副本
+ * @param renderExpirationTime 当前处理的Fiber所在的FiberRoot的nextExpirationTimeToWorkOn
+ * @return {*}
+ */
 function updateSuspenseComponent(
   current,
   workInProgress,
@@ -1309,19 +1316,24 @@ function updateSuspenseComponent(
 
   // We should attempt to render the primary children unless this boundary
   // already suspended during this render (`alreadyCaptured` is true).
+  // 翻译：除非在此渲染过程中该组件已经挂起（“ alreadyCaptured”为true），否则我们应该尝试渲染主要子级。
   let nextState: SuspenseState | null = workInProgress.memoizedState;
   if (nextState === null) {
     // An empty suspense state means this boundary has not yet timed out.
+    // 翻译：空的挂起状态表示此组件尚未超时。
   } else {
     if (!nextState.alreadyCaptured) {
       // Since we haven't already suspended during this commit, clear the
       // existing suspense state. We'll try rendering again.
+      // 翻译：由于我们在提交期间尚未暂停，请清除现有的暂挂状态。我们将尝试再次渲染。
       nextState = null;
     } else {
       // Something in this boundary's subtree already suspended. Switch to
       // rendering the fallback children. Set `alreadyCaptured` to true.
+      // 翻译：该节点的子树中的某些内容已暂停。切换到渲染后备子级。将`readyCaptured`设置为true。
       if (current !== null && nextState === current.memoizedState) {
         // Create a new suspense state to avoid mutating the current tree's.
+        // 翻译：创建一个新的暂挂状态，以避免变异当前的树。
         nextState = {
           alreadyCaptured: true,
           didTimeout: true,
@@ -1329,11 +1341,13 @@ function updateSuspenseComponent(
         };
       } else {
         // Already have a clone, so it's safe to mutate.
+        // 翻译：已经有了克隆，因此可以安全地进行突变。
         nextState.alreadyCaptured = true;
         nextState.didTimeout = true;
       }
     }
   }
+  // state不为空，并且didTimeout为true，才为true。
   const nextDidTimeout = nextState !== null && nextState.didTimeout;
 
   // This next part is a bit confusing. If the children timeout, we switch to
@@ -1393,7 +1407,9 @@ function updateSuspenseComponent(
       child.return = next.return = workInProgress;
     } else {
       // Mount the primary children without an intermediate fragment fiber.
+      // 翻译：安装没有中间fragment节点的主要子级。
       const nextPrimaryChildren = nextProps.children;
+      // 直接渲染子节点。
       child = next = mountChildFibers(
         workInProgress,
         null,
