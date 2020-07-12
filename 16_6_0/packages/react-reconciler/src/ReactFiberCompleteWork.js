@@ -751,6 +751,7 @@ function completeWork(
       if (nextDidTimeout !== prevDidTimeout) {
         // If this render commits, and it switches between the normal state
         // and the timed-out state, schedule an effect.
+        // 翻译：如果此渲染提交，并且在正常状态和超时状态之间切换，请安排效果。
         workInProgress.effectTag |= Update;
       }
       break;

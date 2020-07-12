@@ -1594,7 +1594,7 @@ function renderRoot(
     // Find the earliest uncommitted expiration time in the tree, including
     // work that is suspended. The timeout threshold cannot be longer than
     // the overall expiration.
-    // 翻译：在树中找到最早的未提交到期时间，包括已暂停的工作。超时阈值不能超过整个到期时间。
+    // 翻译：在树中找到最早的未提交到期时间，包括已挂起的工作。超时阈值不能超过整个到期时间。
     const earliestExpirationTime = findEarliestOutstandingPriorityLevel(
       root,
       expirationTime,
@@ -1796,6 +1796,15 @@ function renderDidError() {
   nextRenderDidError = true;
 }
 
+/**
+ * 重试挂起的根节点，这个函数会作为promise的完成回调。
+ * @param root FiberRoot对象
+ * @param boundaryFiber Suspense节点
+ * @param sourceFiber 抛出promise的节点
+ * @param suspendedTime 挂起时间
+ *                      Concurrent模式下是FiberRoot的nextExpirationTimeToWorkOn
+ *                      非Concurrent模式下是Sync
+ */
 function retrySuspendedRoot(
   root: FiberRoot,
   boundaryFiber: Fiber,
@@ -1804,13 +1813,19 @@ function retrySuspendedRoot(
 ) {
   let retryTime;
 
+  // 判断suspendedTime是否处于root上suspendedTime的区间内。
   if (isPriorityLevelSuspended(root, suspendedTime)) {
+    // 处于区间内。
     // Ping at the original level
+    // 翻译：在原始级别执行Ping操作。
     retryTime = suspendedTime;
 
+    // 标记重试优先级。
     markPingedPriorityLevel(root, retryTime);
   } else {
+    // 不处于区间内。
     // Suspense already timed out. Compute a new expiration time
+    // 翻译：暂停已超时。计算新的到期时间。
     const currentTime = requestCurrentTime();
     retryTime = computeExpirationForFiber(currentTime, boundaryFiber);
     markPendingPriorityLevel(root, retryTime);
@@ -1824,24 +1839,33 @@ function retrySuspendedRoot(
   // one performs Sync work, rerendering the Suspense.
 
   if ((boundaryFiber.mode & ConcurrentMode) !== NoContext) {
+    // Concurrent模式。
     if (root === nextRoot && nextRenderExpirationTime === suspendedTime) {
       // Received a ping at the same priority level at which we're currently
       // rendering. Restart from the root.
+      // 翻译：收到了与我们当前渲染时相同的优先级的ping。从根重新启动。
       nextRoot = null;
     }
   }
 
+  // 更新路径上的expirationTime。
   scheduleWorkToRoot(boundaryFiber, retryTime);
   if ((boundaryFiber.mode & ConcurrentMode) === NoContext) {
+    // 非Concurrent模式。
     // Outside of concurrent mode, we must schedule an update on the source
     // fiber, too, since it already committed in an inconsistent state and
     // therefore does not have any pending work.
+    // 翻译：在Concurrent模式之外，我们还必须在源Fiber上安排更新，
+    //      因为它已经以不一致的状态提交，因此没有任何待处理的工作。
+    // 这里不清楚为何再执行了一次，可能是bug。
     scheduleWorkToRoot(sourceFiber, retryTime);
     const sourceTag = sourceFiber.tag;
     if (sourceTag === ClassComponent && sourceFiber.stateNode !== null) {
       // When we try rendering again, we should not reuse the current fiber,
       // since it's known to be in an inconsistent state. Use a force updte to
       // prevent a bail out.
+      // 翻译：当我们再次尝试渲染时，我们不应该重复使用当前Fiber，因为已知它处于不一致状态。
+      //      使用强制更新以防止错误。
       const update = createUpdate(retryTime);
       update.tag = ForceUpdate;
       enqueueUpdate(sourceFiber, update);
@@ -1850,6 +1874,7 @@ function retrySuspendedRoot(
 
   const rootExpirationTime = root.expirationTime;
   if (rootExpirationTime !== NoWork) {
+    // 重启渲染。
     requestWork(root, rootExpirationTime);
   }
 }
@@ -2690,7 +2715,7 @@ function performWorkOnRoot(
       root.finishedWork = null;
       // If this root previously suspended, clear its existing timeout, since
       // we're about to try rendering again.
-      // 翻译：如果该root节点先前已暂停，请清除其现有的超时，因为我们将尝试再次渲染。
+      // 翻译：如果该root节点先前已挂起，请清除其现有的超时，因为我们将尝试再次渲染。
       const timeoutHandle = root.timeoutHandle;
       if (timeoutHandle !== noTimeout) {
         root.timeoutHandle = noTimeout;
@@ -2722,7 +2747,7 @@ function performWorkOnRoot(
       root.finishedWork = null;
       // If this root previously suspended, clear its existing timeout, since
       // we're about to try rendering again.
-      // 翻译：如果该root节点先前已暂停，请清除其现有的超时，因为我们将尝试再次渲染。
+      // 翻译：如果该root节点先前已挂起，请清除其现有的超时，因为我们将尝试再次渲染。
       const timeoutHandle = root.timeoutHandle;
       if (timeoutHandle !== noTimeout) {
         root.timeoutHandle = noTimeout;

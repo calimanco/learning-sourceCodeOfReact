@@ -403,11 +403,14 @@ function commitLifeCycles(
         newDidTimeout = newState.didTimeout;
         if (newDidTimeout) {
           primaryChildParent = finishedWork.child;
+          // 只有这一个地方设置了alreadyCaptured为false。
           newState.alreadyCaptured = false;
           if (newState.timedOutAt === NoWork) {
             // If the children had not already timed out, record the time.
             // This is used to compute the elapsed time during subsequent
             // attempts to render the children.
+            // 翻译：如果子节点还没有超时，请记录时间。
+            //      这用于计算在随后尝试渲染子节点期间的经过时间。
             newState.timedOutAt = requestCurrentTime();
           }
         }

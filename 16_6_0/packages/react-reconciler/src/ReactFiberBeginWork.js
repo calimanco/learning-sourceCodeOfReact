@@ -1317,23 +1317,28 @@ function updateSuspenseComponent(
   // We should attempt to render the primary children unless this boundary
   // already suspended during this render (`alreadyCaptured` is true).
   // 翻译：除非在此渲染过程中该组件已经挂起（“ alreadyCaptured”为true），否则我们应该尝试渲染主要子级。
+  // 这种特殊内置组件，state首次渲染都是null，在commitLifeCycles时才会初始化为Suspense专门的state。
+  // 当commitLifeCycles执行后又会以同步的方式运行scheduleWork。
   let nextState: SuspenseState | null = workInProgress.memoizedState;
   if (nextState === null) {
     // An empty suspense state means this boundary has not yet timed out.
     // 翻译：空的挂起状态表示此组件尚未超时。
   } else {
     if (!nextState.alreadyCaptured) {
+      // 这时节点应该已经就绪，可以走正常流程了。
       // Since we haven't already suspended during this commit, clear the
       // existing suspense state. We'll try rendering again.
       // 翻译：由于我们在提交期间尚未暂停，请清除现有的暂挂状态。我们将尝试再次渲染。
       nextState = null;
     } else {
+      // 同步模式第二次渲染就会走这里。
       // Something in this boundary's subtree already suspended. Switch to
       // rendering the fallback children. Set `alreadyCaptured` to true.
-      // 翻译：该节点的子树中的某些内容已暂停。切换到渲染后备子级。将`readyCaptured`设置为true。
+      // 翻译：该节点的子树中的某些内容已暂停。切换到渲染fallback子节点。将`readyCaptured`设置为true。
       if (current !== null && nextState === current.memoizedState) {
         // Create a new suspense state to avoid mutating the current tree's.
         // 翻译：创建一个新的暂挂状态，以避免变异当前的树。
+        // 这里是新赋值，不会影响workInProgress.memoizedState的值。
         nextState = {
           alreadyCaptured: true,
           didTimeout: true,
@@ -1347,7 +1352,8 @@ function updateSuspenseComponent(
       }
     }
   }
-  // state不为空，并且didTimeout为true，才为true。
+  // 这是节点有没有就绪的标记，state不为null，并且didTimeout为true，才为true。
+  // 首次渲染state为null，故一定是false。
   const nextDidTimeout = nextState !== null && nextState.didTimeout;
 
   // This next part is a bit confusing. If the children timeout, we switch to
@@ -1382,10 +1388,13 @@ function updateSuspenseComponent(
   // children -- we skip over the primary children entirely.
   let next;
   if (current === null) {
+    // 首次渲染。
     // This is the initial mount. This branch is pretty simple because there's
     // no previous state that needs to be preserved.
+    // 翻译：这是初始安装。该分支非常简单，因为不需要保留任何先前的状态。
     if (nextDidTimeout) {
       // Mount separate fragments for primary and fallback children.
+      // 翻译：为主要和fallback子节点挂载单独的片段。
       const nextFallbackChildren = nextProps.fallback;
       const primaryChildFragment = createFiberFromFragment(
         null,
@@ -1406,10 +1415,12 @@ function updateSuspenseComponent(
       next = fallbackChildFragment;
       child.return = next.return = workInProgress;
     } else {
+      // 首次渲染的情况。
       // Mount the primary children without an intermediate fragment fiber.
-      // 翻译：安装没有中间fragment节点的主要子级。
+      // 翻译：挂载没有中间fragment节点的主要子节点。
       const nextPrimaryChildren = nextProps.children;
       // 直接渲染子节点。
+      // 一般情况下子节点会抛出异常，进入throwException。
       child = next = mountChildFibers(
         workInProgress,
         null,
@@ -1418,18 +1429,24 @@ function updateSuspenseComponent(
       );
     }
   } else {
+    // 非首次渲染。
     // This is an update. This branch is more complicated because we need to
     // ensure the state of the primary children is preserved.
+    // 翻译：这是一个更新。该分支更加复杂，因为我们需要确保保留主要子节点的状态。
     const prevState = current.memoizedState;
+    // 一般情况下第二次渲染这里才为false。
     const prevDidTimeout = prevState !== null && prevState.didTimeout;
     if (prevDidTimeout) {
+      // 二次渲染之后的流程。
       // The current tree already timed out. That means each child set is
       // wrapped in a fragment fiber.
+      // 翻译：当前树已超时。这意味着每个子节点都被包裹在片段Fiber节点中。
       const currentPrimaryChildFragment: Fiber = (current.child: any);
       const currentFallbackChildFragment: Fiber = (currentPrimaryChildFragment.sibling: any);
       if (nextDidTimeout) {
         // Still timed out. Reuse the current primary children by cloning
         // its fragment. We're going to skip over these entirely.
+        // 翻译：仍然超时。通过克隆Fragment节点重用当前的主要子级。我们将完全跳过这些。
         const nextFallbackChildren = nextProps.fallback;
         const primaryChildFragment = createWorkInProgress(
           currentPrimaryChildFragment,
@@ -1439,6 +1456,7 @@ function updateSuspenseComponent(
         primaryChildFragment.effectTag |= Placement;
         // Clone the fallback child fragment, too. These we'll continue
         // working on.
+        // 翻译：也克隆fallback子节点。这些我们将继续工作。
         const fallbackChildFragment = (primaryChildFragment.sibling = createWorkInProgress(
           currentFallbackChildFragment,
           nextFallbackChildren,
@@ -1449,11 +1467,13 @@ function updateSuspenseComponent(
         primaryChildFragment.childExpirationTime = NoWork;
         // Skip the primary children, and continue working on the
         // fallback children.
+        // 翻译：跳过主要子节点，并继续处理fallback子节点。
         next = fallbackChildFragment;
         child.return = next.return = workInProgress;
       } else {
         // No longer suspended. Switch back to showing the primary children,
         // and remove the intermediate fragment fiber.
+        // 翻译：不再暂停。切换回显示主要子节点，并除去中间Fragment节点。
         const nextPrimaryChildren = nextProps.children;
         const currentPrimaryChild = currentPrimaryChildFragment.child;
         const currentFallbackChild = currentFallbackChildFragment.child;
@@ -1464,6 +1484,7 @@ function updateSuspenseComponent(
           renderExpirationTime,
         );
         // Delete the fallback children.
+        // 翻译：删除fallback子节点。
         reconcileChildFibers(
           workInProgress,
           currentFallbackChild,
@@ -1471,19 +1492,24 @@ function updateSuspenseComponent(
           renderExpirationTime,
         );
         // Continue rendering the children, like we normally do.
+        // 翻译：像往常一样继续渲染子节点。
         child = next = primaryChild;
       }
     } else {
+      // 二次渲染的流程。
       // The current tree has not already timed out. That means the primary
       // children are not wrapped in a fragment fiber.
+      // 翻译：当前树尚未超时。这意味着主要孩子没有被包裹在Fragment类型的Fiber节点中。
       const currentPrimaryChild: Fiber = (current.child: any);
       if (nextDidTimeout) {
         // Timed out. Wrap the children in a fragment fiber to keep them
         // separate from the fallback children.
+        // 翻译：时间到。用Fragment类型的Fiber节点包裹子节点，使他们与fallback子节点分开。
         const nextFallbackChildren = nextProps.fallback;
         const primaryChildFragment = createFiberFromFragment(
           // It shouldn't matter what the pending props are because we aren't
           // going to render this fragment.
+          // 翻译：暂挂的props是什么都没有关系，因为我们不会渲染该片段。
           null,
           mode,
           NoWork,
@@ -1493,6 +1519,7 @@ function updateSuspenseComponent(
         primaryChildFragment.child = currentPrimaryChild;
         currentPrimaryChild.return = primaryChildFragment;
         // Create a fragment from the fallback children, too.
+        // 翻译：也从fallback子节点创建Fragment类型的Fiber节点。
         const fallbackChildFragment = (primaryChildFragment.sibling = createFiberFromFragment(
           nextFallbackChildren,
           mode,
@@ -1504,11 +1531,17 @@ function updateSuspenseComponent(
         primaryChildFragment.childExpirationTime = NoWork;
         // Skip the primary children, and continue working on the
         // fallback children.
+        // 翻译：跳过主要子节点，并继续处理fallback子节点。
         next = fallbackChildFragment;
+        // 两个Fragment都是当前节点的子节点。
+        // 目的是保留currentPrimaryChild的状态。
+        // workInProgress => primaryChildFragment => currentPrimaryChild
+        //                => fallbackChildFragment
         child.return = next.return = workInProgress;
       } else {
         // Still haven't timed out.  Continue rendering the children, like we
         // normally do.
+        // 翻译：仍然没有超时。像往常一样继续渲染子节点。
         const nextPrimaryChildren = nextProps.children;
         next = child = reconcileChildFibers(
           workInProgress,

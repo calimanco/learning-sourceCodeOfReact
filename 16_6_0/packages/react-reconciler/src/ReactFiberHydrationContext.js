@@ -343,7 +343,7 @@ function popToNextHostParent(fiber: Fiber): void {
 }
 
 /**
- * 配合completeUnitWork，向上移动nextHydratableInstance和hydrationParentFiber指针。
+ * 配合completeUnitOfWork，向上移动nextHydratableInstance和hydrationParentFiber指针。
  * 返回是否需要对当前的Fiber执行hydrate操作。
  * @param fiber 要处理的Fiber对象
  * @return {boolean}
