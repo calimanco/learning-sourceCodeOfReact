@@ -117,6 +117,12 @@ function resolveCurrentlyRenderingFiber(): Fiber {
   return currentlyRenderingFiber;
 }
 
+/**
+ * 准备使用hooks。
+ * @param current 当前的Fiber节点，可能为空
+ * @param workInProgress 当前处理的Fiber节点的进行中副本
+ * @param nextRenderExpirationTime 当前处理的Fiber所在的FiberRoot的nextExpirationTimeToWorkOn
+ */
 export function prepareToUseHooks(
   current: Fiber | null,
   workInProgress: Fiber,
@@ -142,6 +148,14 @@ export function prepareToUseHooks(
   // numberOfReRenders = 0;
 }
 
+/**
+ * 组件更新结束时重置公共变量。
+ * @param Component 函数组件
+ * @param props 新的props对象
+ * @param children 运行函数组件得到子级元素
+ * @param refOrContext context相关
+ * @return {*}
+ */
 export function finishHooks(
   Component: any,
   props: any,
@@ -162,19 +176,25 @@ export function finishHooks(
     // the `renderPhaseUpdates` map. Call the component again, reusing the
     // work-in-progress hooks and applying the additional updates on top. Keep
     // restarting until no more updates are scheduled.
+    // 翻译：更新是在渲染阶段安排的。他们保存在'renderPhaseUpdates'的map中。
+    //      再次调用组件，重用进行中的hooks，并在顶部应用其他更新。
+    //      继续重新启动，直到不再安排任何更新。
     didScheduleRenderPhaseUpdate = false;
     numberOfReRenders += 1;
 
     // Start over from the beginning of the list
+    // 翻译：从链表的开头重新开始。
     currentHook = null;
     workInProgressHook = null;
     componentUpdateQueue = null;
 
+    // 重新运行了一边函数组件。
     children = Component(props, refOrContext);
   }
   renderPhaseUpdates = null;
   numberOfReRenders = 0;
 
+  // 函数组件对应的Fiber对象。
   const renderedWork: Fiber = (currentlyRenderingFiber: any);
 
   renderedWork.memoizedState = firstWorkInProgressHook;
