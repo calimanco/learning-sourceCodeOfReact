@@ -283,47 +283,64 @@ function cloneHook(hook: Hook): Hook {
   };
 }
 
+/**
+ * 创建运行中的hook对象。
+ * @return {Hook}
+ */
 function createWorkInProgressHook(): Hook {
   if (workInProgressHook === null) {
+    // 当前没有hook的情况。
     // This is the first hook in the list
+    // 翻译：这是列表中的第一个hook。
     if (firstWorkInProgressHook === null) {
       isReRender = false;
+      // firstCurrentHook是prepareToUseHooks时写入的memoizedState。
+      // 也就是现有的hook对象，在首次渲染时为空。
       currentHook = firstCurrentHook;
       if (currentHook === null) {
         // This is a newly mounted hook
+        // 翻译：这是一个新挂载的hook。
         workInProgressHook = createHook();
       } else {
         // Clone the current hook.
+        // 翻译：克隆已有的hook。
         workInProgressHook = cloneHook(currentHook);
       }
       firstWorkInProgressHook = workInProgressHook;
     } else {
       // There's already a work-in-progress. Reuse it.
+      // 翻译：已经有一个运行中的hook，重用它。
       isReRender = true;
       currentHook = firstCurrentHook;
       workInProgressHook = firstWorkInProgressHook;
     }
   } else {
+    // 当前有hook的情况。
     if (workInProgressHook.next === null) {
       isReRender = false;
       let hook;
       if (currentHook === null) {
         // This is a newly mounted hook
+        // 翻译：这是一个新挂载的hook。
         hook = createHook();
       } else {
         currentHook = currentHook.next;
         if (currentHook === null) {
           // This is a newly mounted hook
+          // 翻译：这是一个新挂载的hook。
           hook = createHook();
         } else {
           // Clone the current hook.
+          // 翻译：克隆已有的hook。
           hook = cloneHook(currentHook);
         }
       }
       // Append to the end of the list
+      // 翻译：追加到列表的末尾。
       workInProgressHook = workInProgressHook.next = hook;
     } else {
       // There's already a work-in-progress. Reuse it.
+      // 翻译：已经有一个运行中的hook，重用它。
       isReRender = true;
       workInProgressHook = workInProgressHook.next;
       currentHook = currentHook !== null ? currentHook.next : null;
@@ -358,26 +375,43 @@ export function useState<S>(
   return useReducer(
     basicStateReducer,
     // useReducer has a special case to support lazy useState initializers
+    // 翻译：useReducer具有特殊情况以支持懒惰的useState初始化程序。
     (initialState: any),
   );
 }
 
+/**
+ * hook的API之一，用于保存状态。
+ * @param reducer (state, action) => newState的运行器
+ * @param initialState 初始state
+ * @param initialAction 初始action，惰性生成初始state
+ * @return {[*, Dispatch<A>]|[*, Dispatch<A>]}
+ */
 export function useReducer<S, A>(
   reducer: (S, A) => S,
   initialState: S,
   initialAction: A | void | null,
 ): [S, Dispatch<A>] {
+  // 获取到当前处理的Fiber对象，这个函数其实很多余只是把全局变量返回再赋值。
   currentlyRenderingFiber = resolveCurrentlyRenderingFiber();
+  // 创建hook对象，它会检查当前Fiber上是否存在hook，有则复用，没有则创建。
+  // 并且会设置isReRender的值，这是渲染中调用更新函数的结果。
   workInProgressHook = createWorkInProgressHook();
+  // 一开始一定不存在。
   let queue: UpdateQueue<A> | null = (workInProgressHook.queue: any);
   if (queue !== null) {
     // Already have a queue, so this is an update.
+    // 翻译：已经有了一个队列，所以这是一个更新。
     if (isReRender) {
+      // 这是在渲染阶段中触发更新的特殊情况，这种情况下Update对象来自renderPhaseUpdates，
+      // 并且会无视优先级，一次性更新。
       // This is a re-render. Apply the new render phase updates to the previous
       // work-in-progress hook.
+      // 翻译：这是重新渲染。将新的渲染阶段更新应用于先前的运行中的hook。
       const dispatch: Dispatch<A> = (queue.dispatch: any);
       if (renderPhaseUpdates !== null) {
         // Render phase updates are stored in a map of queue -> linked list
+        // 翻译：渲染阶段更新存储在队列映射->链表中。
         const firstRenderPhaseUpdate = renderPhaseUpdates.get(queue);
         if (firstRenderPhaseUpdate !== undefined) {
           renderPhaseUpdates.delete(queue);
@@ -387,6 +421,7 @@ export function useReducer<S, A>(
             // Process this render phase update. We don't have to check the
             // priority because it will always be the same as the current
             // render's.
+            // 翻译：处理此渲染阶段更新。我们不必检查优先级，因为它始终与当前渲染的优先级相同。
             const action = update.action;
             newState = reducer(newState, action);
             update = update.next;
@@ -396,6 +431,7 @@ export function useReducer<S, A>(
 
           // Don't persist the state accumlated from the render phase updates to
           // the base state unless the queue is empty.
+          // 翻译：除非队列为空，否则不要将从渲染阶段更新累积的状态持久化为基本状态。
           // TODO: Not sure if this is the desired semantics, but it's what we
           // do for gDSFP. I can't remember why.
           if (workInProgressHook.baseUpdate === queue.last) {
@@ -409,21 +445,29 @@ export function useReducer<S, A>(
     }
 
     // The last update in the entire queue
+    // 翻译：整个队列中的最后更新。
     const last = queue.last;
     // The last update that is part of the base state.
+    // 翻译：作为基本状态一部分的最后更新。
+    // 上次运行中断的那个Update对象的前一个。
     const baseUpdate = workInProgressHook.baseUpdate;
 
     // Find the first unprocessed update.
+    // 翻译：查找第一个未处理的更新。
     let first;
     if (baseUpdate !== null) {
+      // 存在之前未完成的更新。
       if (last !== null) {
         // For the first update, the queue is a circular linked list where
         // `queue.last.next = queue.first`. Once the first update commits, and
         // the `baseUpdate` is no longer empty, we can unravel the list.
+        // 翻译：对于第一次更新，队列是一个循环链接列表，其中“queue.last.next=queue.first”。
+        //      一旦第一个更新提交，并且`baseUpdate`不再为空，我们就可以展开列表。
         last.next = null;
       }
       first = baseUpdate.next;
     } else {
+      // 更新队列是环状的。
       first = last !== null ? last.next : null;
     }
     if (first !== null) {
@@ -433,23 +477,28 @@ export function useReducer<S, A>(
       let prevUpdate = baseUpdate;
       let update = first;
       let didSkip = false;
+      // 循环Update队列，依据优先级判断是否要使用reducer运行它，遇到第一个不需要运行的对象则记录其前一个。
       do {
         const updateExpirationTime = update.expirationTime;
         if (updateExpirationTime < renderExpirationTime) {
           // Priority is insufficient. Skip this update. If this is the first
           // skipped update, the previous update/state is the new base
           // update/state.
+          // 翻译：优先权不足。跳过此更新。
+          //      如果这是第一个跳过的更新，则先前的update/state是新的基本update/state。
           if (!didSkip) {
             didSkip = true;
             newBaseUpdate = prevUpdate;
             newBaseState = newState;
           }
           // Update the remaining priority in the queue.
+          // 翻译：更新队列中的剩余优先级。
           if (updateExpirationTime > remainingExpirationTime) {
             remainingExpirationTime = updateExpirationTime;
           }
         } else {
           // Process this update.
+          // 翻译：处理此更新。
           const action = update.action;
           newState = reducer(newState, action);
         }
@@ -462,6 +511,7 @@ export function useReducer<S, A>(
         newBaseState = newState;
       }
 
+      // 将结果写入hook对象。
       workInProgressHook.memoizedState = newState;
       workInProgressHook.baseUpdate = newBaseUpdate;
       workInProgressHook.baseState = newBaseState;
@@ -472,24 +522,32 @@ export function useReducer<S, A>(
   }
 
   // There's no existing queue, so this is the initial render.
+  // 翻译：没有现有的队列，因此这是初始渲染。
   if (reducer === basicStateReducer) {
     // Special case for `useState`.
+    // 翻译：useState的特例。
     if (typeof initialState === 'function') {
       initialState = initialState();
     }
   } else if (initialAction !== undefined && initialAction !== null) {
+    // 与redux相似的设计，reducer第一个参数是state对象，第二个参数是action对象。
+    // 运行的结果是新的state。
     initialState = reducer(initialState, initialAction);
   }
+  // 挂载新的state，由于是初始渲染baseState（前一次渲染结果）与memoizedState相同。
   workInProgressHook.memoizedState = workInProgressHook.baseState = initialState;
+  // 生成queue链表的首个对象。
   queue = workInProgressHook.queue = {
     last: null,
     dispatch: null,
   };
+  // 生成dispatch函数。
   const dispatch: Dispatch<A> = (queue.dispatch = (dispatchAction.bind(
     null,
     currentlyRenderingFiber,
     queue,
   ): any));
+  // API返回的结果。
   return [workInProgressHook.memoizedState, dispatch];
 }
 
@@ -654,6 +712,14 @@ export function useMemo<T>(
   return nextValue;
 }
 
+/**
+ * useState和useReducer返回的更新函数（即返回数列里的第二位）的生成函数。
+ * 用于生成update对象，并加入hook对象的更新队列，再将Fiber加入更新调度。
+ * 这个函数通过bind语法生成更新函数，前两个参数生成时绑定，后续只会传入第三个参数。
+ * @param fiber 绑定的Fiber节点
+ * @param queue 绑定的hook对象更新队列
+ * @param action 要更新的state对象
+ */
 function dispatchAction<A>(fiber: Fiber, queue: UpdateQueue<A>, action: A) {
   invariant(
     numberOfReRenders < RE_RENDER_LIMIT,
@@ -669,7 +735,10 @@ function dispatchAction<A>(fiber: Fiber, queue: UpdateQueue<A>, action: A) {
     // This is a render phase update. Stash it in a lazily-created map of
     // queue -> linked list of updates. After this render pass, we'll restart
     // and apply the stashed updates on top of the work-in-progress hook.
+    // 翻译：这是渲染阶段更新。将其存储在延迟创建的队列映射->链接的更新列表中。
+    //      渲染通过之后，我们将重新启动并在顶部进行中的hook上应用隐藏的更新。
     didScheduleRenderPhaseUpdate = true;
+    // 生成update对象。
     const update: Update<A> = {
       expirationTime: renderExpirationTime,
       action,
@@ -680,9 +749,11 @@ function dispatchAction<A>(fiber: Fiber, queue: UpdateQueue<A>, action: A) {
     }
     const firstRenderPhaseUpdate = renderPhaseUpdates.get(queue);
     if (firstRenderPhaseUpdate === undefined) {
+      // 更新列队第一个。
       renderPhaseUpdates.set(queue, update);
     } else {
       // Append the update to the end of the list.
+      // 翻译：将更新追加到列表的末尾。
       let lastRenderPhaseUpdate = firstRenderPhaseUpdate;
       while (lastRenderPhaseUpdate.next !== null) {
         lastRenderPhaseUpdate = lastRenderPhaseUpdate.next;
@@ -690,28 +761,36 @@ function dispatchAction<A>(fiber: Fiber, queue: UpdateQueue<A>, action: A) {
       lastRenderPhaseUpdate.next = update;
     }
   } else {
+    // 获取运行时间。
     const currentTime = requestCurrentTime();
+    // 计算过期时间。
     const expirationTime = computeExpirationForFiber(currentTime, fiber);
+    // 生成Update对象。
     const update: Update<A> = {
       expirationTime,
       action,
       next: null,
     };
+    // 与useEffect有关。
     flushPassiveEffects();
     // Append the update to the end of the list.
+    // 翻译：将更新追加到列表的末尾。
     const last = queue.last;
     if (last === null) {
       // This is the first update. Create a circular list.
+      // 翻译：这是第一次更新。创建一个环状列表。
       update.next = update;
     } else {
       const first = last.next;
       if (first !== null) {
         // Still circular.
+        // 翻译：仍然是环状的。
         update.next = first;
       }
       last.next = update;
     }
     queue.last = update;
+    // 加入调度。
     scheduleWork(fiber, expirationTime);
   }
 }
