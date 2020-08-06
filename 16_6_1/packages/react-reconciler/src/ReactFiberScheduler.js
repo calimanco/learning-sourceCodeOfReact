@@ -576,7 +576,7 @@ function markLegacyErrorBoundaryAsFailed(instance: mixed) {
 
 function flushPassiveEffects() {
   if (passiveEffectCallback !== null) {
-    Schedule_cancelCallback(passiveEffectCallbackHandle);
+    Schedule_cancelCallback(passiveEffepassiveEffectCallbackHandlectCallbackHandle);
     // We call the scheduled callback instead of commitPassiveEffects directly
     // to ensure tracing works correctly.
     // 翻译：我们直接调用调度的回调而不是commitPassiveEffects来确保跟踪正常工作。

@@ -551,6 +551,14 @@ export function useReducer<S, A>(
   return [workInProgressHook.memoizedState, dispatch];
 }
 
+/**
+ * 推入更新。
+ * @param tag
+ * @param create
+ * @param destroy
+ * @param inputs
+ * @return {Effect}
+ */
 function pushEffect(tag, create, destroy, inputs) {
   const effect: Effect = {
     tag,
@@ -594,6 +602,12 @@ export function useRef<T>(initialValue: T): {current: T} {
   return ref;
 }
 
+/**
+ * hook的API之一，用于处理副作用。
+ * DOM 变更之后同步调用。
+ * @param create
+ * @param inputs
+ */
 export function useLayoutEffect(
   create: () => mixed,
   inputs: Array<mixed> | void | null,
@@ -601,6 +615,12 @@ export function useLayoutEffect(
   useEffectImpl(UpdateEffect, UnmountMutation | MountLayout, create, inputs);
 }
 
+/**
+ * hook的API之一，用于处理副作用。
+ * 每轮渲染结束后执行。
+ * @param create
+ * @param inputs
+ */
 export function useEffect(
   create: () => mixed,
   inputs: Array<mixed> | void | null,
@@ -613,21 +633,33 @@ export function useEffect(
   );
 }
 
+/**
+ * useEffect和useLayoutEffect都会调用的函数。
+ * @param fiberEffectTag 有关Fiber的EffectTag
+ * @param hookEffectTag 有关hook的EffectTag
+ * @param create 用户输入的回调函数
+ * @param inputs 用户输入的监听变量列表
+ */
 function useEffectImpl(fiberEffectTag, hookEffectTag, create, inputs): void {
   currentlyRenderingFiber = resolveCurrentlyRenderingFiber();
   workInProgressHook = createWorkInProgressHook();
 
+  // 默认是[create]，而create是一个匿名函数，因此这是永远都会为true的。
   let nextInputs = inputs !== undefined && inputs !== null ? inputs : [create];
   let destroy = null;
   if (currentHook !== null) {
+    // 二次渲染。
     const prevEffect = currentHook.memoizedState;
     destroy = prevEffect.destroy;
     if (areHookInputsEqual(nextInputs, prevEffect.inputs)) {
+      // 对比结果，需要更新。
       pushEffect(NoHookEffect, create, destroy, nextInputs);
       return;
     }
   }
 
+  // 首次渲染。
+  // 增加需要检查的tag，这里涉及到回调触发时机，useEffect和useLayoutEffect不一样。
   currentlyRenderingFiber.effectTag |= fiberEffectTag;
   workInProgressHook.memoizedState = pushEffect(
     hookEffectTag,
