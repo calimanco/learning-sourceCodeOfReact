@@ -369,6 +369,12 @@ export function useContext<T>(
   return readContext(context, observedBits);
 }
 
+/**
+ * hook的API之一，用于保存状态。
+ * 特殊版的useReducer。
+ * @param initialState 初始化状态
+ * @return {[*, Dispatch<*>]}
+ */
 export function useState<S>(
   initialState: (() => S) | S,
 ): [S, Dispatch<BasicStateAction<S>>] {
@@ -552,26 +558,32 @@ export function useReducer<S, A>(
 }
 
 /**
- * 推入更新。
- * @param tag
- * @param create
- * @param destroy
- * @param inputs
+ * 创建hookEffect对象，并推入Fiber的更新队列。
+ * @param tag hookEffectTag
+ * @param create 用户输入的回调函数
+ * @param destroy 销毁函数
+ * @param inputs 用户输入的监听变量列表
  * @return {Effect}
  */
 function pushEffect(tag, create, destroy, inputs) {
+  // 创建hookEffect对象。
   const effect: Effect = {
     tag,
     create,
     destroy,
     inputs,
     // Circular
+    // 翻译：环形。
     next: (null: any),
   };
+  // 会形成环状链表，挂载到componentUpdateQueue上。
+  // 这个公共变量会在finishHooks的时候写入Fiber的updateQueue。
   if (componentUpdateQueue === null) {
+    // 还没有链表，要先新建，返回{lastEffect: null}
     componentUpdateQueue = createFunctionComponentUpdateQueue();
     componentUpdateQueue.lastEffect = effect.next = effect;
   } else {
+    // 已有链表，则插入。
     const lastEffect = componentUpdateQueue.lastEffect;
     if (lastEffect === null) {
       componentUpdateQueue.lastEffect = effect.next = effect;
@@ -585,6 +597,11 @@ function pushEffect(tag, create, destroy, inputs) {
   return effect;
 }
 
+/**
+ * hook的API之一，用于保存引用。
+ * @param initialValue 初始值
+ * @return {*}
+ */
 export function useRef<T>(initialValue: T): {current: T} {
   currentlyRenderingFiber = resolveCurrentlyRenderingFiber();
   workInProgressHook = createWorkInProgressHook();
@@ -618,8 +635,8 @@ export function useLayoutEffect(
 /**
  * hook的API之一，用于处理副作用。
  * 每轮渲染结束后执行。
- * @param create
- * @param inputs
+ * @param create 用户输入的回调函数
+ * @param inputs 用户输入的监听变量列表
  */
 export function useEffect(
   create: () => mixed,
@@ -646,20 +663,22 @@ function useEffectImpl(fiberEffectTag, hookEffectTag, create, inputs): void {
 
   // 默认是[create]，而create是一个匿名函数，因此这是永远都会为true的。
   let nextInputs = inputs !== undefined && inputs !== null ? inputs : [create];
+  // destroy是create运行之后返回的返回，也就是用户输入的销毁函数。
   let destroy = null;
   if (currentHook !== null) {
     // 二次渲染。
     const prevEffect = currentHook.memoizedState;
     destroy = prevEffect.destroy;
+    // 浅对比，两个inputs内数据是否变化
     if (areHookInputsEqual(nextInputs, prevEffect.inputs)) {
-      // 对比结果，需要更新。
+      // 对比结果，不需要更新。
       pushEffect(NoHookEffect, create, destroy, nextInputs);
       return;
     }
   }
 
-  // 首次渲染。
-  // 增加需要检查的tag，这里涉及到回调触发时机，useEffect和useLayoutEffect不一样。
+  // 首次渲染，以及二次渲染需要更新的情况。
+  // 在Fiber上增加需要检查的tag，这里涉及到回调触发时机，useEffect和useLayoutEffect不一样。
   currentlyRenderingFiber.effectTag |= fiberEffectTag;
   workInProgressHook.memoizedState = pushEffect(
     hookEffectTag,
@@ -669,6 +688,12 @@ function useEffectImpl(fiberEffectTag, hookEffectTag, create, inputs): void {
   );
 }
 
+/**
+ * hook的API之一，用于DOM挂载之后确保ref存在的情况下调用回调。
+ * @param ref 要挂载的Ref对象或惰性运行的函数
+ * @param create 就绪时的回调函数
+ * @param inputs 监听变量列表
+ */
 export function useImperativeMethods<T>(
   ref: {current: T | null} | ((inst: T | null) => mixed) | null | void,
   create: () => T,
@@ -700,6 +725,12 @@ export function useImperativeMethods<T>(
   }, nextInputs);
 }
 
+/**
+ * hook的API之一，用于缓存函数或数据。
+ * @param callback 要缓存的函数或数据
+ * @param inputs 监听变量列表
+ * @return {T|*} 缓存的函数或数据
+ */
 export function useCallback<T>(
   callback: T,
   inputs: Array<mixed> | void | null,
@@ -721,6 +752,12 @@ export function useCallback<T>(
   return callback;
 }
 
+/**
+ * hook的API之一，用于缓存函数结果。
+ * @param nextCreate 函数
+ * @param inputs 监听变量列表
+ * @return {T|*} 结果
+ */
 export function useMemo<T>(
   nextCreate: () => T,
   inputs: Array<mixed> | void | null,

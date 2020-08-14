@@ -307,6 +307,12 @@ function commitBeforeMutationLifeCycles(
   }
 }
 
+/**
+ * 遍历Fiber上的hook对象，运行符合EffectTag条件的函数。
+ * @param unmountTag 卸载时的EffectTag，在这时会调用destroy方法
+ * @param mountTag 挂载时的EffectTag，在这时会调用create方法
+ * @param finishedWork 要处理的Fiber节点
+ */
 function commitHookEffectList(
   unmountTag: number,
   mountTag: number,
