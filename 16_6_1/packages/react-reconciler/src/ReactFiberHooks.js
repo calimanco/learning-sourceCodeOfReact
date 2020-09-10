@@ -359,6 +359,12 @@ function basicStateReducer<S>(state: S, action: BasicStateAction<S>): S {
   return typeof action === 'function' ? action(state) : action;
 }
 
+/**
+ *
+ * @param context
+ * @param observedBits
+ * @return {T}
+ */
 export function useContext<T>(
   context: ReactContext<T>,
   observedBits: void | number | boolean,
